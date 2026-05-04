@@ -104,6 +104,12 @@ export class PostgresDriver extends Driver<PostgresDriver.Config> {
       load: value => isNullable(value) ? value : Binary.fromSource(value),
     })
 
+    this.define<string, string>({
+      types: ['uuid'],
+      dump: value => value,
+      load: value => value,
+    })
+
     this.define<number, number>({
       types: Field.number as any,
       dump: value => value,
@@ -476,6 +482,7 @@ export class PostgresDriver extends Driver<PostgresDriver.Config> {
       case 'time': return 'time with time zone'
       case 'timestamp': return 'timestamp with time zone'
       case 'binary': return 'bytea'
+      case 'uuid': return 'uuid'
       default: throw new Error(`unsupported type: ${type}`)
     }
   }

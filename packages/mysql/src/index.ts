@@ -3,7 +3,7 @@ import { createPool, format } from '@vlasky/mysql'
 import { Inject } from 'cordis'
 import type {} from '@cordisjs/plugin-logger'
 import type { OkPacket, Pool, PoolConfig, PoolConnection } from 'mysql'
-import { Driver, Eval, executeUpdate, Field, RuntimeError, Selection } from '@cordisjs/plugin-database'
+import { bufferToUuid, Driver, Eval, executeUpdate, Field, RuntimeError, Selection, uuidToBuffer } from '@cordisjs/plugin-database'
 import { escapeId, isBracketed } from '@cordisjs/sql-utils'
 import { Compat, MySQLBuilder } from './builder'
 import zhCN from './locales/zh-CN.yml'
@@ -119,6 +119,12 @@ export class MySQLDriver extends Driver<MySQLDriver.Config> {
       types: ['binary'],
       dump: value => value,
       load: value => isNullable(value) ? value : Binary.fromSource(value),
+    })
+
+    this.define<string, any>({
+      types: ['uuid'],
+      dump: value => isNullable(value) ? value : Buffer.from(uuidToBuffer(value)),
+      load: value => isNullable(value) || typeof value === 'string' ? value : bufferToUuid(value),
     })
 
     this.define<number, number>({
@@ -566,6 +572,7 @@ INSERT INTO mtt VALUES(json_extract(j, concat('$[', i, ']'))); SET i=i+1; END WH
       case 'string': return (length || 255) > 65536 ? 'longtext' : `varchar(${length || 255})`
       case 'text': return (length || 255) > 65536 ? 'longtext' : `text(${length || 65535})`
       case 'binary': return (length || 65537) > 65536 ? 'longblob' : `blob`
+      case 'uuid': return 'binary(16)'
       case 'list': return `text(${length || 65535})`
       case 'json': return `text(${length || 65535})`
       default: throw new Error(`unsupported type: ${type}`)

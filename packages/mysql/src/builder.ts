@@ -1,6 +1,6 @@
 import { Builder, escapeId, isBracketed } from '@cordisjs/sql-utils'
 import { Binary, Dict, isNullable, Time } from 'cosmokit'
-import { Driver, Field, isAggrExpr, isEvalExpr, Model, randomId, Selection, Type } from '@cordisjs/plugin-database'
+import { bufferToUuid, Driver, Field, isAggrExpr, isEvalExpr, Model, randomId, Selection, Type, uuidToBuffer } from '@cordisjs/plugin-database'
 
 export interface Compat {
   maria?: boolean
@@ -94,6 +94,21 @@ export class MySQLBuilder extends Builder {
       decode: value => `from_base64(${value})`,
       load: value => isNullable(value) || typeof value === 'object' ? value : Binary.fromBase64(value),
       dump: value => isNullable(value) || typeof value === 'string' ? value : Binary.toBase64(value),
+    }
+
+    this.transformers['uuid'] = {
+      encode: value => `bin_to_uuid(${value})`,
+      decode: value => `uuid_to_bin(${value})`,
+      load: value => {
+        if (isNullable(value)) return value
+        if (typeof value === 'string') return value
+        return bufferToUuid(value)
+      },
+      dump: value => {
+        if (isNullable(value)) return value
+        if (typeof value === 'string') return value
+        return Buffer.from(uuidToBuffer(value))
+      },
     }
 
     this.transformers['date'] = {
