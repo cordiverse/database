@@ -39,7 +39,6 @@ interface DType {
   date?: Date
   time?: Date
   binary?: ArrayBuffer | Buffer
-  uuid?: string
   bigint?: bigint
   bnum?: number
   bnum2?: number
@@ -245,10 +244,6 @@ function ModelOperations(database: Database) {
         type: 'binary',
         initial: toBinary('initial buffer')
       },
-      uuid: {
-        type: 'uuid',
-        initial: '00000000-0000-0000-0000-000000000000',
-      },
       bigint: 'bigint2',
       bnum,
       bnum2: {
@@ -306,7 +301,6 @@ namespace ModelOperations {
     { id: 12, decimal: 2.432, int64: 9223372036854775806n },
     { id: 13, bnum: 114514, bnum2: 12345 },
     { id: 14, object: { embed: { custom: { a: 'abc', b: 123 } } } },
-    { id: 15, uuid: '550e8400-e29b-41d4-a716-446655440000' },
   ]
 
   const dobjectTable: DObject[] = [
@@ -353,22 +347,6 @@ namespace ModelOperations {
       table[0].binary = toBinary('this is Buffer')
       await database.set('dtypes', table[0].id, { binary: Buffer.from('this is Buffer') })
       await expect(database.get('dtypes', {})).to.eventually.have.deep.members(table)
-    })
-
-    it('uuid round-trip', async () => {
-      const table = await setup(database, 'dtypes', dtypeTable)
-      const row = table.find(x => x.id === 15)!
-      expect(row.uuid).to.equal('550e8400-e29b-41d4-a716-446655440000')
-      table.filter(x => x.id !== 15).forEach(x => expect(x.uuid).to.equal('00000000-0000-0000-0000-000000000000'))
-
-      const updated = '00112233-4455-6677-8899-aabbccddeeff'
-      await database.set('dtypes', row.id, { uuid: updated })
-      const after = await database.get('dtypes', row.id)
-      expect(after[0].uuid).to.equal(updated)
-
-      await database.upsert('dtypes', [{ id: row.id, uuid: '550e8400-e29b-41d4-a716-446655440000' }])
-      const after2 = await database.get('dtypes', row.id)
-      expect(after2[0].uuid).to.equal('550e8400-e29b-41d4-a716-446655440000')
     })
 
     it('modifier', async () => {

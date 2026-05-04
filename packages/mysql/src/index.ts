@@ -572,7 +572,11 @@ INSERT INTO mtt VALUES(json_extract(j, concat('$[', i, ']'))); SET i=i+1; END WH
       case 'string': return (length || 255) > 65536 ? 'longtext' : `varchar(${length || 255})`
       case 'text': return (length || 255) > 65536 ? 'longtext' : `text(${length || 65535})`
       case 'binary': return (length || 65537) > 65536 ? 'longblob' : `blob`
-      case 'uuid': return 'binary(16)'
+      case 'uuid':
+        if (this._compat.mysql57 || this._compat.maria) {
+          throw new Error(`uuid type requires MySQL 8.0+ or MariaDB 10.7+`)
+        }
+        return 'binary(16)'
       case 'list': return `text(${length || 65535})`
       case 'json': return `text(${length || 65535})`
       default: throw new Error(`unsupported type: ${type}`)

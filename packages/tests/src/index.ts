@@ -11,6 +11,7 @@ import Json from './json'
 import Transaction from './transaction'
 import Relation from './relation'
 import Performance from './performance'
+import Uuid from './uuid'
 import './setup'
 
 export { expect } from 'chai'
@@ -105,6 +106,7 @@ namespace Tests {
   export const transaction = Transaction
   export const relation = Relation
   export const performance = Performance
+  export const uuid = Uuid
 }
 
 export default createUnit(Tests, true)
