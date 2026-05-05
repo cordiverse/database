@@ -83,6 +83,14 @@ export class MySQLDriver extends Driver<MySQLDriver.Config> {
     this._compat.maria105 = !!version.match(/10.5.\d+-MariaDB/)
     // For json_table
     this._compat.mysql57 = !!version.match(/5.7.\d+/)
+    // MariaDB 10.7+ has the native UUID data type
+    // (MariaDB has no BIN_TO_UUID/UUID_TO_BIN; see MDEV-15854)
+    const mariaVer = version.match(/(\d+)\.(\d+)\.\d+-MariaDB/)
+    if (mariaVer) {
+      const major = +mariaVer[1]
+      const minor = +mariaVer[2]
+      this._compat.mariaUuid = major > 10 || (major === 10 && minor >= 7)
+    }
 
     this._compat.timezone = timezone
 
@@ -121,11 +129,22 @@ export class MySQLDriver extends Driver<MySQLDriver.Config> {
       load: value => isNullable(value) ? value : Binary.fromSource(value),
     })
 
-    this.define<string, any>({
-      types: ['uuid'],
-      dump: value => isNullable(value) ? value : Buffer.from(uuidToBuffer(value)),
-      load: value => isNullable(value) || typeof value === 'string' ? value : bufferToUuid(value),
-    })
+    if (this._compat.mariaUuid) {
+      // MariaDB native UUID — strings round-trip directly.
+      this.define<string, any>({
+        types: ['uuid'],
+        dump: value => value,
+        load: value => isNullable(value) || typeof value === 'string' ? value : bufferToUuid(value),
+      })
+    } else if (!this._compat.mysql57 && !this._compat.maria) {
+      // MySQL 8.0+ — BINARY(16); JS handles the string ↔ Buffer conversion.
+      this.define<string, any>({
+        types: ['uuid'],
+        dump: value => isNullable(value) ? value : Buffer.from(uuidToBuffer(value)),
+        load: value => isNullable(value) || typeof value === 'string' ? value : bufferToUuid(value),
+      })
+    }
+    // otherwise: uuid fields cause getTypeDef to throw — no transformer needed.
 
     this.define<number, number>({
       types: Field.number as any,
@@ -573,6 +592,7 @@ INSERT INTO mtt VALUES(json_extract(j, concat('$[', i, ']'))); SET i=i+1; END WH
       case 'text': return (length || 255) > 65536 ? 'longtext' : `text(${length || 65535})`
       case 'binary': return (length || 65537) > 65536 ? 'longblob' : `blob`
       case 'uuid':
+        if (this._compat.mariaUuid) return 'uuid'
         if (this._compat.mysql57 || this._compat.maria) {
           throw new Error(`uuid type requires MySQL 8.0+ or MariaDB 10.7+`)
         }

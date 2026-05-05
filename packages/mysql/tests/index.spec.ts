@@ -23,6 +23,9 @@ describe('@cordisjs/plugin-database-mysql', () => {
   })
 
   test(ctx, {
+    // requires MySQL 8.0+ / MariaDB 10.7+ (uuid_to_bin / bin_to_uuid).
+    // enable locally with `--+uuid` when running against a supported server.
+    uuid: false,
     query: {
       list: {
         elementQuery: false,

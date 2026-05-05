@@ -16,6 +16,7 @@ jobs:
           - mysql:5.7
           - mysql:8.0
           - mariadb:10.5
+          - mariadb:11.4
         node-version: [22, 24]
 
     services:
@@ -42,7 +43,7 @@ jobs:
       - name: Install
         run: yarn --no-immutable
       - name: Unit Test
-        run: yarn test:json mysql
+        run: yarn test:json mysql ${{ (matrix.mysql-image == 'mysql:8.0' || matrix.mysql-image == 'mariadb:11.4') && '--+uuid' || '' }}
       - name: Report Coverage
         uses: codecov/codecov-action@v6
         with:

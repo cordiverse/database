@@ -5,6 +5,7 @@ import { bufferToUuid, Driver, Field, isAggrExpr, isEvalExpr, Model, randomId, S
 export interface Compat {
   maria?: boolean
   maria105?: boolean
+  mariaUuid?: boolean
   mysql57?: boolean
   timezone?: string
 }
@@ -158,6 +159,9 @@ export class MySQLBuilder extends Builder {
   }
 
   escapePrimitive(value: any, type?: Type) {
+    if (type?.type === 'uuid' && typeof value === 'string' && !this.compat.mariaUuid) {
+      return `X'${Binary.toHex(uuidToBuffer(value).buffer as ArrayBuffer)}'`
+    }
     if (value instanceof Date) {
       value = Time.template('yyyy-MM-dd hh:mm:ss.SSS', value)
     } else if (value instanceof RegExp) {

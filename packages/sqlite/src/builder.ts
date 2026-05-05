@@ -80,6 +80,9 @@ export class SQLiteBuilder extends Builder {
   }
 
   escapePrimitive(value: any, type?: Type) {
+    if (type?.type === 'uuid' && typeof value === 'string') {
+      return `X'${Binary.toHex(uuidToBuffer(value).buffer as ArrayBuffer)}'`
+    }
     if (value instanceof Date) value = +value
     else if (value instanceof RegExp) value = value.source
     else if (Binary.is(value)) return `X'${Binary.toHex(value)}'`
