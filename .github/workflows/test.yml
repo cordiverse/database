@@ -24,7 +24,7 @@ jobs:
         image: ${{ matrix.mysql-image }}
         ports:
           - 3306:3306
-        options: --health-cmd "mysqladmin ping" --health-interval 10s --health-timeout 5s --health-retries 5
+        options: --health-cmd "${{ startsWith(matrix.mysql-image, 'mariadb:') && 'mariadb-admin ping' || 'mysqladmin ping' }}" --health-interval 10s --health-timeout 5s --health-retries 5
         env:
           MYSQL_USER: koishi
           MYSQL_DATABASE: test

@@ -1,7 +1,11 @@
 import { Dict, isNullable, mapValues } from 'cosmokit'
-import { Eval, Field, flatten, isAggrExpr, isComparable, isEvalExpr, isFlat, makeRegExp, Model, Query, Selection, Type, unravel } from '@cordisjs/plugin-database'
-import { Filter, FilterOperators, ObjectId } from 'mongodb'
+import { bufferToUuid, Eval, Field, flatten, isAggrExpr, isComparable, isEvalExpr, isFlat, makeRegExp, Model, Query, Selection, Type, unravel, uuidToBuffer } from '@cordisjs/plugin-database'
+import { Binary, Filter, FilterOperators, ObjectId } from 'mongodb'
 import MongoDriver from '.'
+
+function toUuidBinary(value: string) {
+  return new Binary(Buffer.from(uuidToBuffer(value)), Binary.SUBTYPE_UUID)
+}
 
 function createFieldFilter(query: Query.Field, key: string, type?: Type) {
   const filters: Filter<any>[] = []
@@ -18,9 +22,13 @@ function transformFieldQuery(query: Query.Field, key: string, filters: Filter<an
   // shorthand syntax
   if (isComparable(query) || query instanceof ObjectId) {
     if (type?.type === 'primary' && typeof query === 'string') query = new ObjectId(query)
+    if (type?.type === 'uuid' && typeof query === 'string') query = toUuidBinary(query)
     return { $eq: query }
   } else if (Array.isArray(query)) {
     if (!query.length) return false
+    if (type?.type === 'uuid') {
+      return { $in: query.map(x => typeof x === 'string' ? toUuidBinary(x) : x) }
+    }
     return { $in: query }
   } else if (query instanceof RegExp) {
     return { $regex: query }
@@ -70,7 +78,15 @@ function transformFieldQuery(query: Query.Field, key: string, filters: Filter<an
       if (query[prop]) return { $ne: null }
       else return null
     } else {
-      result[prop] = query[prop]
+      let value = query[prop]
+      if (type?.type === 'uuid') {
+        if (Array.isArray(value)) {
+          value = value.map(x => typeof x === 'string' ? toUuidBinary(x) : x)
+        } else if (typeof value === 'string') {
+          value = toUuidBinary(value)
+        }
+      }
+      result[prop] = value
     }
   }
   if (!Object.keys(result).length) return true
@@ -603,15 +619,27 @@ export class Builder {
   dump(value: any, type: Model | Type | Eval.Expr | undefined): any {
     if (!type) return value
     if (isEvalExpr(type)) type = Type.fromTerm(type)
-    if (!Type.isType(type)) type = type.getType()
+    if (Type.isType(type)) {
+      const converter = this.driver.types[type?.type]
+      let res = value
+      res = Type.transform(res, type, (value, type) => this.dump(value, type))
+      res = converter?.dump ? converter.dump(res) : res
+      const ancestor = this.driver.database.types[type.type]?.type
+      res = this.dump(res, ancestor ? Type.fromField(ancestor) : undefined)
+      return res
+    }
 
-    const converter = this.driver.types[type?.type]
-    let res = value
-    res = Type.transform(res, type, (value, type) => this.dump(value, type))
-    res = converter?.dump ? converter.dump(res) : res
-    const ancestor = this.driver.database.types[type.type]?.type
-    res = this.dump(res, ancestor ? Type.fromField(ancestor) : undefined)
-    return res
+    // Model: flatten, dump each leaf, then restore nested object layout
+    // (mongo rejects dotted field names, and nested relation columns like
+    // `parent.id` must be stored as `{ parent: { id: <dumped> } }`).
+    const formatted = type.format(value)
+    const flat: Dict = {}
+    for (const key in formatted) {
+      const field = type.fields[key]
+      if (!field) continue
+      flat[key] = this.dump(formatted[key], field.type)
+    }
+    return unravel(flat)
   }
 
   load(rows: any[], model: Model): any[]
