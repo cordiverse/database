@@ -5,7 +5,7 @@ import { bufferToUuid, Driver, Field, isAggrExpr, isEvalExpr, Model, randomId, S
 export interface Compat {
   maria?: boolean
   maria105?: boolean
-  mariaUuid?: boolean
+  uuid?: boolean
   mysql57?: boolean
   timezone?: string
 }
@@ -97,19 +97,24 @@ export class MySQLBuilder extends Builder {
       dump: value => isNullable(value) || typeof value === 'string' ? value : Binary.toBase64(value),
     }
 
-    this.transformers['uuid'] = {
-      encode: value => `bin_to_uuid(${value})`,
-      decode: value => `uuid_to_bin(${value})`,
-      load: value => {
-        if (isNullable(value)) return value
-        if (typeof value === 'string') return value
-        return bufferToUuid(value)
-      },
-      dump: value => {
-        if (isNullable(value)) return value
-        if (typeof value === 'string') return value
-        return Buffer.from(uuidToBuffer(value))
-      },
+    if (!compat.uuid) {
+      // MySQL 8.0 has bin_to_uuid / uuid_to_bin built-in;
+      // MySQL 5.7 & MariaDB <10.7 get polyfills via _setupCompatFunctions.
+      // MariaDB 10.7+ uses the native UUID type in JSON, no wrapping needed.
+      this.transformers['uuid'] = {
+        encode: value => `bin_to_uuid(${value})`,
+        decode: value => `uuid_to_bin(${value})`,
+        load: value => {
+          if (isNullable(value)) return value
+          if (typeof value === 'string') return value
+          return bufferToUuid(value)
+        },
+        dump: value => {
+          if (isNullable(value)) return value
+          if (typeof value === 'string') return value
+          return Buffer.from(uuidToBuffer(value))
+        },
+      }
     }
 
     this.transformers['date'] = {
@@ -159,8 +164,8 @@ export class MySQLBuilder extends Builder {
   }
 
   escapePrimitive(value: any, type?: Type) {
-    if (type?.type === 'uuid' && typeof value === 'string' && !this.compat.mariaUuid) {
-      return `X'${Binary.toHex(uuidToBuffer(value).buffer as ArrayBuffer)}'`
+    if (type?.type === 'uuid' && typeof value === 'string' && !this.compat.uuid) {
+      return `uuid_to_bin(${this.quote(value)})`
     }
     if (value instanceof Date) {
       value = Time.template('yyyy-MM-dd hh:mm:ss.SSS', value)

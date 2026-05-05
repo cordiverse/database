@@ -1,6 +1,6 @@
 import { Builder, escapeId } from '@cordisjs/sql-utils'
 import { Binary, Dict, isNullable } from 'cosmokit'
-import { Driver, Field, isEvalExpr, Model, randomId, RegExpLike, Type, uuidToBuffer, bufferToUuid } from '@cordisjs/plugin-database'
+import { bufferToUuid, Driver, Field, isEvalExpr, Model, randomId, RegExpLike, Type, uuidToBuffer } from '@cordisjs/plugin-database'
 
 export class SQLiteBuilder extends Builder {
   protected escapeMap = {

@@ -1,5 +1,5 @@
 import { Dict, isNullable, mapValues } from 'cosmokit'
-import { bufferToUuid, Eval, Field, flatten, isAggrExpr, isComparable, isEvalExpr, isFlat, makeRegExp, Model, Query, Selection, Type, unravel, uuidToBuffer } from '@cordisjs/plugin-database'
+import { Eval, Field, flatten, isAggrExpr, isComparable, isEvalExpr, isFlat, makeRegExp, Model, Query, Selection, Type, unravel, uuidToBuffer } from '@cordisjs/plugin-database'
 import { Binary, Filter, FilterOperators, ObjectId } from 'mongodb'
 import MongoDriver from '.'
 

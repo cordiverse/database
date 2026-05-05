@@ -52,7 +52,7 @@ export class MySQLDriver extends Driver<MySQLDriver.Config> {
   static name = 'mysql'
 
   public pool!: Pool
-  public sql: MySQLBuilder = new MySQLBuilder(this)
+  public sql!: MySQLBuilder
 
   private session?: PoolConnection
   private _compat: Compat = {}
@@ -89,10 +89,12 @@ export class MySQLDriver extends Driver<MySQLDriver.Config> {
     if (mariaVer) {
       const major = +mariaVer[1]
       const minor = +mariaVer[2]
-      this._compat.mariaUuid = major > 10 || (major === 10 && minor >= 7)
+      this._compat.uuid = major > 10 || (major === 10 && minor >= 7)
     }
 
     this._compat.timezone = timezone
+
+    this.sql = new MySQLBuilder(this, undefined, this._compat)
 
     if (this._compat.mysql57 || this._compat.maria) {
       await this._setupCompatFunctions()
@@ -129,22 +131,23 @@ export class MySQLDriver extends Driver<MySQLDriver.Config> {
       load: value => isNullable(value) ? value : Binary.fromSource(value),
     })
 
-    if (this._compat.mariaUuid) {
+    if (this._compat.uuid) {
       // MariaDB native UUID — strings round-trip directly.
       this.define<string, any>({
         types: ['uuid'],
         dump: value => value,
         load: value => isNullable(value) || typeof value === 'string' ? value : bufferToUuid(value),
       })
-    } else if (!this._compat.mysql57 && !this._compat.maria) {
-      // MySQL 8.0+ — BINARY(16); JS handles the string ↔ Buffer conversion.
+    } else {
+      // BINARY(16) storage — JS handles the string ↔ Buffer conversion.
+      // MySQL 8.0 has bin_to_uuid/uuid_to_bin as built-ins; legacy versions
+      // get polyfilled equivalents via _setupCompatFunctions.
       this.define<string, any>({
         types: ['uuid'],
         dump: value => isNullable(value) ? value : Buffer.from(uuidToBuffer(value)),
         load: value => isNullable(value) || typeof value === 'string' ? value : bufferToUuid(value),
       })
     }
-    // otherwise: uuid fields cause getTypeDef to throw — no transformer needed.
 
     this.define<number, number>({
       types: Field.number as any,
@@ -317,6 +320,14 @@ INSERT INTO mtt VALUES(json_extract(j, concat('$[', i, ']'))); SET i=i+1; END WH
       await this.query(`CREATE FUNCTION minato_cfunc_max (j JSON) RETURNS DOUBLE DETERMINISTIC BEGIN DECLARE n int; DECLARE i int; DECLARE r DOUBLE;
 DROP TEMPORARY TABLE IF EXISTS mtt; CREATE TEMPORARY TABLE mtt (value JSON); SELECT json_length(j) into n; set i = 0; WHILE i<n DO
 INSERT INTO mtt VALUES(json_extract(j, concat('$[', i, ']'))); SET i=i+1; END WHILE; SELECT max(value) INTO r FROM mtt; RETURN r; END`)
+      // Polyfill MySQL 8.0's BIN_TO_UUID / UUID_TO_BIN (single-arg form).
+      // MariaDB never implemented these (MDEV-15854); MySQL 5.7 predates them.
+      await this.query(`DROP FUNCTION IF EXISTS bin_to_uuid`)
+      await this.query(`CREATE FUNCTION bin_to_uuid (b BINARY(16)) RETURNS CHAR(36) DETERMINISTIC
+RETURN LOWER(CONCAT_WS('-', SUBSTR(HEX(b), 1, 8), SUBSTR(HEX(b), 9, 4), SUBSTR(HEX(b), 13, 4), SUBSTR(HEX(b), 17, 4), SUBSTR(HEX(b), 21, 12)))`)
+      await this.query(`DROP FUNCTION IF EXISTS uuid_to_bin`)
+      await this.query(`CREATE FUNCTION uuid_to_bin (u CHAR(36)) RETURNS BINARY(16) DETERMINISTIC
+RETURN UNHEX(REPLACE(u, '-', ''))`)
     } catch (e) {
       this.ctx.logger?.warn(`Failed to setup compact functions: ${e}`)
     }
@@ -592,11 +603,10 @@ INSERT INTO mtt VALUES(json_extract(j, concat('$[', i, ']'))); SET i=i+1; END WH
       case 'text': return (length || 255) > 65536 ? 'longtext' : `text(${length || 65535})`
       case 'binary': return (length || 65537) > 65536 ? 'longblob' : `blob`
       case 'uuid':
-        if (this._compat.mariaUuid) return 'uuid'
-        if (this._compat.mysql57 || this._compat.maria) {
-          throw new Error(`uuid type requires MySQL 8.0+ or MariaDB 10.7+`)
-        }
-        return 'binary(16)'
+        // MariaDB 10.7+ has a native UUID type; legacy versions (MySQL 5.7,
+        // MariaDB <10.7) get polyfilled bin_to_uuid / uuid_to_bin functions
+        // via _setupCompatFunctions, so BINARY(16) works universally.
+        return this._compat.uuid ? 'uuid' : 'binary(16)'
       case 'list': return `text(${length || 65535})`
       case 'json': return `text(${length || 65535})`
       default: throw new Error(`unsupported type: ${type}`)
