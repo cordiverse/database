@@ -1,6 +1,6 @@
 {
   "name": "@cordisjs/database-tests",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "description": "Test Cases for Minato",
   "type": "module",
   "main": "lib/index.js",
@@ -26,13 +26,13 @@
     "unit"
   ],
   "devDependencies": {
-    "@cordisjs/plugin-database": "^4.0.1",
+    "@cordisjs/plugin-database": "^4.0.2",
     "@types/chai": "^5.2.3",
     "@types/chai-as-promised": "^8.0.2",
-    "cordis": "^4.0.0-rc.4"
+    "cordis": "^4.0.0-rc.5"
   },
   "peerDependencies": {
-    "@cordisjs/plugin-database": "^4.0.1"
+    "@cordisjs/plugin-database": "^4.0.2"
   },
   "dependencies": {
     "chai": "^5.3.3",

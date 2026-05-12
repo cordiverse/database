@@ -1,7 +1,5 @@
 import { Binary, Dict, difference, isNullable, makeArray, pick } from 'cosmokit'
 import { createPool, format } from '@vlasky/mysql'
-import { Inject } from 'cordis'
-import type {} from '@cordisjs/plugin-logger'
 import type { OkPacket, Pool, PoolConfig, PoolConnection } from 'mysql'
 import { Driver, Eval, executeUpdate, Field, RuntimeError, Selection } from '@cordisjs/plugin-database'
 import { escapeId, isBracketed } from '@cordisjs/sql-utils'
@@ -47,7 +45,6 @@ interface QueryTask {
   reject: (reason: unknown) => void
 }
 
-@Inject('logger', false, { name: 'mysql' })
 export class MySQLDriver extends Driver<MySQLDriver.Config> {
   static name = 'mysql'
 
@@ -231,7 +228,7 @@ export class MySQLDriver extends Driver<MySQLDriver.Config> {
     }
 
     if (!columns.length) {
-      this.ctx.logger?.info('auto creating table %c', name)
+      this.ctx.logger?.info('auto creating table %C', name)
       return this.query(`CREATE TABLE ${escapeId(name)} (${create.join(', ')}) COLLATE = ${this.sql.escape(this.config.charset ?? 'utf8mb4_general_ci')}`)
     }
 
@@ -241,7 +238,7 @@ export class MySQLDriver extends Driver<MySQLDriver.Config> {
     ]
     if (operations.length) {
       // https://dev.mysql.com/doc/refman/5.7/en/alter-table.html
-      this.ctx.logger?.info('auto updating table %c', name)
+      this.ctx.logger?.info('auto updating table %C', name)
       await this.query(`ALTER TABLE ${escapeId(name)} ${operations.join(', ')}`)
     }
 
@@ -257,7 +254,7 @@ export class MySQLDriver extends Driver<MySQLDriver.Config> {
       after: keys => dropKeys.push(...keys),
       finalize: async () => {
         if (!dropKeys.length) return
-        this.ctx.logger?.info('auto migrating table %c', name)
+        this.ctx.logger?.info('auto migrating table %C', name)
         await this.query(`ALTER TABLE ${escapeId(name)} ${dropKeys.map(key => `DROP ${escapeId(key)}`).join(', ')}`)
       },
     })

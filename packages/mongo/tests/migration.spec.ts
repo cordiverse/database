@@ -1,7 +1,7 @@
 import { $, Database, Driver, Primary } from '@cordisjs/plugin-database'
 import { Context, Fiber } from 'cordis'
 import MongoDriver from '@cordisjs/plugin-database-mongo'
-import Logger from '@cordisjs/plugin-logger'
+import LoggerConsole from '@cordisjs/plugin-logger-console'
 import { ObjectId } from 'mongodb'
 import { expect } from '@cordisjs/database-tests'
 
@@ -77,7 +77,7 @@ describe('@cordisjs/plugin-database-mongo/migrate-virtualKey', () => {
 
   before(async () => {
     await ctx.plugin(Database)
-    await ctx.plugin(Logger)
+    await ctx.plugin(LoggerConsole)
     fiber = await ctx.plugin(MongoDriver, {
       host: 'localhost',
       port: 27017,

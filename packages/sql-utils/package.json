@@ -1,6 +1,6 @@
 {
   "name": "@cordisjs/sql-utils",
-  "version": "6.0.0",
+  "version": "6.0.1",
   "description": "SQL Utilities for Minato",
   "type": "module",
   "main": "lib/index.js",
@@ -30,11 +30,11 @@
     "builder"
   ],
   "devDependencies": {
-    "@cordisjs/plugin-database": "^4.0.1",
-    "cordis": "^4.0.0-rc.4"
+    "@cordisjs/plugin-database": "^4.0.2",
+    "cordis": "^4.0.0-rc.5"
   },
   "peerDependencies": {
-    "@cordisjs/plugin-database": "^4.0.1"
+    "@cordisjs/plugin-database": "^4.0.2"
   },
   "dependencies": {
     "cosmokit": "^1.8.1"
