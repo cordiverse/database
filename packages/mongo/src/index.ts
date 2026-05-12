@@ -1,4 +1,7 @@
-import { BSONType, Binary as MongoBinary, ClientSession, Collection, Db, IndexDescription, Long, MongoClient, MongoClientOptions, MongoError, ObjectId } from 'mongodb'
+import {
+  BSONType, ClientSession, Collection, Db, IndexDescription, Long, Binary as MongoBinary,
+  MongoClient, MongoClientOptions, MongoError, ObjectId,
+} from 'mongodb'
 import { Binary, deepEqual, Dict, isNullable, makeArray, mapValues, noop, omit, pick, remove } from 'cosmokit'
 import { bufferToUuid, Driver, Eval, executeUpdate, Field, hasSubquery, Query, RuntimeError, Selection, uuidToBuffer } from '@cordisjs/plugin-database'
 import { Inject } from 'cordis'

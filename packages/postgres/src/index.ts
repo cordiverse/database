@@ -104,12 +104,6 @@ export class PostgresDriver extends Driver<PostgresDriver.Config> {
       load: value => isNullable(value) ? value : Binary.fromSource(value),
     })
 
-    this.define<string, string>({
-      types: ['uuid'],
-      dump: value => value,
-      load: value => value,
-    })
-
     this.define<number, number>({
       types: Field.number as any,
       dump: value => value,

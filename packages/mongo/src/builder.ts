@@ -1,97 +1,10 @@
 import { Dict, isNullable, mapValues } from 'cosmokit'
-import { Eval, Field, flatten, isAggrExpr, isComparable, isEvalExpr, isFlat, makeRegExp, Model, Query, Selection, Type, unravel, uuidToBuffer } from '@cordisjs/plugin-database'
-import { Binary, Filter, FilterOperators, ObjectId } from 'mongodb'
+import {
+  Eval, Field, flatten, isAggrExpr, isComparable, isEvalExpr, isFlat, makeRegExp,
+  Model, Query, Selection, Type, unravel,
+} from '@cordisjs/plugin-database'
+import { Filter, FilterOperators, ObjectId } from 'mongodb'
 import MongoDriver from '.'
-
-function toUuidBinary(value: string) {
-  return new Binary(Buffer.from(uuidToBuffer(value)), Binary.SUBTYPE_UUID)
-}
-
-function createFieldFilter(query: Query.Field, key: string, type?: Type) {
-  const filters: Filter<any>[] = []
-  const result: Filter<any> = {}
-  const child = transformFieldQuery(query, key, filters, type)
-  if (child === false) return false
-  if (child !== true) result[key] = child
-  if (filters.length) result.$and = filters
-  if (Object.keys(result).length) return result
-  return true
-}
-
-function transformFieldQuery(query: Query.Field, key: string, filters: Filter<any>[], type?: Type) {
-  // shorthand syntax
-  if (isComparable(query) || query instanceof ObjectId) {
-    if (type?.type === 'primary' && typeof query === 'string') query = new ObjectId(query)
-    if (type?.type === 'uuid' && typeof query === 'string') query = toUuidBinary(query)
-    return { $eq: query }
-  } else if (Array.isArray(query)) {
-    if (!query.length) return false
-    if (type?.type === 'uuid') {
-      return { $in: query.map(x => typeof x === 'string' ? toUuidBinary(x) : x) }
-    }
-    return { $in: query }
-  } else if (query instanceof RegExp) {
-    return { $regex: query }
-  } else if (isNullable(query)) {
-    return null
-  }
-
-  // query operators
-  const result: FilterOperators<any> = {}
-  for (const prop in query) {
-    if (prop === '$and') {
-      for (const item of query[prop]!) {
-        const child = createFieldFilter(item, key, type)
-        if (child === false) return false
-        if (child !== true) filters.push(child)
-      }
-    } else if (prop === '$or') {
-      const $or: Filter<any>[] = []
-      if (!query[prop]!.length) return false
-      const always = query[prop]!.some((item) => {
-        const child = createFieldFilter(item, key, type)
-        if (typeof child === 'boolean') return child
-        $or.push(child)
-      })
-      if (!always) filters.push({ $or })
-    } else if (prop === '$not') {
-      const child = createFieldFilter(query[prop], key, type)
-      if (child === true) return false
-      if (child !== false) filters.push({ $nor: [child] })
-    } else if (prop === '$el') {
-      const child = transformFieldQuery(query[prop]!, key, filters)
-      if (child === false) return false
-      if (child !== true) result.$elemMatch = child!
-    } else if (prop === '$regex') {
-      return { $regex: typeof query[prop] === 'string' ? query[prop] : makeRegExp(query[prop]) }
-    } else if (prop === '$regexFor') {
-      filters.push({
-        $expr: {
-          $regexMatch: {
-            input: query[prop].input ?? query[prop],
-            regex: '$' + key,
-            ...(query[prop].flags ? { options: query[prop].flags } : {}),
-          },
-        },
-      })
-    } else if (prop === '$exists') {
-      if (query[prop]) return { $ne: null }
-      else return null
-    } else {
-      let value = query[prop]
-      if (type?.type === 'uuid') {
-        if (Array.isArray(value)) {
-          value = value.map(x => typeof x === 'string' ? toUuidBinary(x) : x)
-        } else if (typeof value === 'string') {
-          value = toUuidBinary(value)
-        }
-      }
-      result[prop] = value
-    }
-  }
-  if (!Object.keys(result).length) return true
-  return result
-}
 
 export type ExtractUnary<T> = T extends [infer U] ? U : T
 
@@ -331,6 +244,88 @@ export class Builder {
     this.evalOperators = Object.assign(Object.create(null), this.evalOperators)
   }
 
+  private dumpQuery(value: any, type?: Type): any {
+    const typeKey = type?.type
+    if (!typeKey) return value
+    const converter = this.driver.types[typeKey]
+    if (!converter?.dump) return value
+    if (Array.isArray(value)) return value.map(v => converter.dump!(v))
+    return converter.dump(value)
+  }
+
+  private createFieldFilter(query: Query.Field, key: string, type?: Type) {
+    const filters: Filter<any>[] = []
+    const result: Filter<any> = {}
+    const child = this.transformFieldQuery(query, key, filters, type)
+    if (child === false) return false
+    if (child !== true) result[key] = child
+    if (filters.length) result.$and = filters
+    if (Object.keys(result).length) return result
+    return true
+  }
+
+  private transformFieldQuery(query: Query.Field, key: string, filters: Filter<any>[], type?: Type) {
+    // shorthand syntax
+    if (isComparable(query) || query instanceof ObjectId) {
+      return { $eq: this.dumpQuery(query, type) }
+    } else if (Array.isArray(query)) {
+      if (!query.length) return false
+      return { $in: this.dumpQuery(query, type) }
+    } else if (query instanceof RegExp) {
+      return { $regex: query }
+    } else if (isNullable(query)) {
+      return null
+    }
+
+    // query operators
+    const result: FilterOperators<any> = {}
+    for (const prop in query) {
+      if (prop === '$and') {
+        for (const item of query[prop]!) {
+          const child = this.createFieldFilter(item, key, type)
+          if (child === false) return false
+          if (child !== true) filters.push(child)
+        }
+      } else if (prop === '$or') {
+        const $or: Filter<any>[] = []
+        if (!query[prop]!.length) return false
+        const always = query[prop]!.some((item) => {
+          const child = this.createFieldFilter(item, key, type)
+          if (typeof child === 'boolean') return child
+          $or.push(child)
+        })
+        if (!always) filters.push({ $or })
+      } else if (prop === '$not') {
+        const child = this.createFieldFilter(query[prop], key, type)
+        if (child === true) return false
+        if (child !== false) filters.push({ $nor: [child] })
+      } else if (prop === '$el') {
+        const child = this.transformFieldQuery(query[prop]!, key, filters)
+        if (child === false) return false
+        if (child !== true) result.$elemMatch = child!
+      } else if (prop === '$regex') {
+        return { $regex: typeof query[prop] === 'string' ? query[prop] : makeRegExp(query[prop]) }
+      } else if (prop === '$regexFor') {
+        filters.push({
+          $expr: {
+            $regexMatch: {
+              input: query[prop].input ?? query[prop],
+              regex: '$' + key,
+              ...(query[prop].flags ? { options: query[prop].flags } : {}),
+            },
+          },
+        })
+      } else if (prop === '$exists') {
+        if (query[prop]) return { $ne: null }
+        else return null
+      } else {
+        result[prop] = this.dumpQuery(query[prop], type)
+      }
+    }
+    if (!Object.keys(result).length) return true
+    return result
+  }
+
   public createKey() {
     return '_temp_' + ++this.counter
   }
@@ -446,7 +441,7 @@ export class Builder {
         const flattenQuery = ignore(value) ? { [key]: value } : flatten(value, `${key}.`, ignore)
         for (const key in flattenQuery) {
           const value = flattenQuery[key], actualKey = this.getActualKey(key)
-          const query = transformFieldQuery(value, actualKey, additional, sel.model.fields[key]?.type)
+          const query = this.transformFieldQuery(value, actualKey, additional, sel.model.fields[key]?.type)
           if (query === false) return
           if (query !== true) filter[actualKey] = query
         }
