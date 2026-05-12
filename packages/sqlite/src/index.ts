@@ -1,7 +1,5 @@
 import { Binary, deepEqual, Dict, difference, isNullable, makeArray, mapValues } from 'cosmokit'
 import { bufferToUuid, Driver, Eval, executeUpdate, Field, getCell, hasSubquery, isEvalExpr, Selection, uuidToBuffer } from '@cordisjs/plugin-database'
-import { Inject } from 'cordis'
-import type {} from '@cordisjs/plugin-logger'
 import { escapeId } from '@cordisjs/sql-utils'
 import type { DatabaseSync, StatementSync } from 'node:sqlite'
 import enUS from './locales/en-US.yml'
@@ -52,7 +50,6 @@ interface SQLiteMasterInfo {
   sql: string
 }
 
-@Inject('logger', false, { name: 'sqlite' })
 export class SQLiteDriver extends Driver<SQLiteDriver.Config> {
   static name = 'sqlite'
 
@@ -117,7 +114,7 @@ export class SQLiteDriver extends Driver<SQLiteDriver.Config> {
     }
 
     if (!columns.length) {
-      this.ctx.logger?.info('auto creating table %c', table)
+      this.ctx.logger?.info('auto creating table %C', table)
       this._run(`CREATE TABLE ${escapeId(table)} (${[...columnDefs, ...indexDefs].join(', ')})`)
     } else if (shouldMigrate) {
       // preserve old columns
@@ -133,7 +130,7 @@ export class SQLiteDriver extends Driver<SQLiteDriver.Config> {
 
       const temp = table + '_temp'
       const fields = Object.keys(mapping).map(escapeId).join(', ')
-      this.ctx.logger?.info('auto migrating table %c', table)
+      this.ctx.logger?.info('auto migrating table %C', table)
       this._run(`CREATE TABLE ${escapeId(temp)} (${[...columnDefs, ...indexDefs].join(', ')})`)
       try {
         this._run(`INSERT INTO ${escapeId(temp)} SELECT ${fields} FROM ${escapeId(table)}`)
@@ -144,7 +141,7 @@ export class SQLiteDriver extends Driver<SQLiteDriver.Config> {
       }
       this._run(`ALTER TABLE ${escapeId(temp)} RENAME TO ${escapeId(table)}`)
     } else if (alter.length) {
-      this.ctx.logger?.info('auto updating table %c', table)
+      this.ctx.logger?.info('auto updating table %C', table)
       for (const def of alter) {
         this._run(`ALTER TABLE ${escapeId(table)} ${def}`)
       }

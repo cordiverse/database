@@ -1,8 +1,6 @@
 import postgres from 'postgres'
 import { Binary, Dict, difference, isNullable, makeArray, pick } from 'cosmokit'
 import { Driver, Eval, executeUpdate, Field, Selection } from '@cordisjs/plugin-database'
-import { Inject } from 'cordis'
-import type {} from '@cordisjs/plugin-logger'
 import { isBracketed } from '@cordisjs/sql-utils'
 import { escapeId, formatTime, PostgresBuilder } from './builder'
 import zhCN from './locales/zh-CN.yml'
@@ -59,7 +57,6 @@ function createIndex(keys: string | string[]) {
   return makeArray(keys).map(escapeId).join(', ')
 }
 
-@Inject('logger', false, { name: 'postgres' })
 export class PostgresDriver extends Driver<PostgresDriver.Config> {
   static name = 'postgres'
 
@@ -226,7 +223,7 @@ export class PostgresDriver extends Driver<PostgresDriver.Config> {
     }
 
     if (!columns.length) {
-      this.ctx.logger?.info('auto creating table %c', name)
+      this.ctx.logger?.info('auto creating table %C', name)
       return this.query<any>(`CREATE TABLE ${escapeId(name)} (${create.join(', ')}, _pg_mtime BIGINT)`)
     }
 
@@ -236,7 +233,7 @@ export class PostgresDriver extends Driver<PostgresDriver.Config> {
     ]
     if (operations.length) {
       // https://www.postgresql.org/docs/current/sql-altertable.html
-      this.ctx.logger?.info('auto updating table %c', name)
+      this.ctx.logger?.info('auto updating table %C', name)
       if (rename.length) {
         await Promise.all(rename.map(op => this.query(`ALTER TABLE ${escapeId(name)} ${op}`)))
       }
@@ -250,7 +247,7 @@ export class PostgresDriver extends Driver<PostgresDriver.Config> {
       after: keys => dropKeys.push(...keys),
       finalize: async () => {
         if (!dropKeys.length) return
-        this.ctx.logger?.info('auto migrating table %c', name)
+        this.ctx.logger?.info('auto migrating table %C', name)
         await this.query(`ALTER TABLE ${escapeId(name)} ${dropKeys.map(key => `DROP ${escapeId(key)}`).join(', ')}`)
       },
     })

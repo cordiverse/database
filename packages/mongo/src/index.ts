@@ -4,8 +4,6 @@ import {
 } from 'mongodb'
 import { Binary, deepEqual, Dict, isNullable, makeArray, mapValues, noop, omit, pick, remove } from 'cosmokit'
 import { bufferToUuid, Driver, Eval, executeUpdate, Field, hasSubquery, Query, RuntimeError, Selection, uuidToBuffer } from '@cordisjs/plugin-database'
-import { Inject } from 'cordis'
-import type {} from '@cordisjs/plugin-logger'
 import { Builder } from './builder'
 import zhCN from './locales/zh-CN.yml'
 import enUS from './locales/en-US.yml'
@@ -21,7 +19,6 @@ interface TableMeta {
   fields?: string[]
 }
 
-@Inject('logger', false, { name: 'mongo' })
 export class MongoDriver extends Driver<MongoDriver.Config> {
   static name = 'mongo'
 

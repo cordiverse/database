@@ -17,7 +17,7 @@ jobs:
           - mysql:8.0
           - mariadb:10.5
           - mariadb:11.4
-        node-version: [22, 24]
+        node-version: [22, 24, 26]
 
     services:
       mysql:
@@ -44,12 +44,6 @@ jobs:
         run: yarn --no-immutable
       - name: Unit Test
         run: yarn test:json mysql
-      - name: Report Coverage
-        uses: codecov/codecov-action@v6
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./coverage/coverage-final.json
-          name: codecov
 
   postgres:
     name: ${{ matrix.postgres-image }} (${{ matrix.node-version }})
@@ -62,7 +56,7 @@ jobs:
           - postgres:16
           - postgres:15
           - postgres:14
-        node-version: [22, 24]
+        node-version: [22, 24, 26]
 
     services:
       postgres:
@@ -87,12 +81,6 @@ jobs:
         run: yarn --no-immutable
       - name: Unit Test
         run: yarn test:json postgres
-      - name: Report Coverage
-        uses: codecov/codecov-action@v6
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./coverage/coverage-final.json
-          name: codecov
 
   mongo:
     name: ${{ matrix.mongo-image }} (${{ matrix.node-version }})
@@ -104,7 +92,7 @@ jobs:
         mongo-image:
           - mongo:6.0
           - mongo:latest
-        node-version: [22, 24]
+        node-version: [22, 24, 26]
 
     services:
       mongo:
@@ -127,12 +115,6 @@ jobs:
         run: yarn --no-immutable
       - name: Unit Test
         run: yarn test:json mongo
-      - name: Report Coverage
-        uses: codecov/codecov-action@v6
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./coverage/coverage-final.json
-          name: codecov
 
   mongo-replica:
     name: mongo-replica:${{ matrix.mongo-version }} (${{ matrix.node-version }})
@@ -143,7 +125,7 @@ jobs:
       matrix:
         mongo-version:
           - latest
-        node-version: [22, 24]
+        node-version: [22, 24, 26]
 
     steps:
       - name: Check out
@@ -164,12 +146,6 @@ jobs:
         run: yarn --no-immutable
       - name: Unit Test
         run: yarn test:json mongo --+transaction.abort
-      - name: Report Coverage
-        uses: codecov/codecov-action@v6
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./coverage/coverage-final.json
-          name: codecov
 
   test:
     name: ${{ matrix.driver-name }} (${{ matrix.node-version }})
@@ -179,7 +155,7 @@ jobs:
       fail-fast: false
       matrix:
         driver-name: [sqlite, memory]
-        node-version: [22, 24]
+        node-version: [22, 24, 26]
 
     steps:
       - name: Check out
@@ -194,9 +170,3 @@ jobs:
         run: yarn --no-immutable
       - name: Unit Test
         run: yarn test:json ${{ matrix.driver-name }}
-      - name: Report Coverage
-        uses: codecov/codecov-action@v6
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./coverage/coverage-final.json
-          name: codecov
