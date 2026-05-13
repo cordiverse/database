@@ -3,17 +3,18 @@ import Database from '@cordisjs/plugin-database'
 import MemoryDriver from '@cordisjs/plugin-database-memory'
 import LoggerConsole from '@cordisjs/plugin-logger-console'
 import test from '@cordisjs/database-tests'
+import { afterAll, beforeAll, describe } from 'vitest'
 
 describe('@cordisjs/plugin-database-memory', () => {
   const ctx = new Context()
 
-  before(async () => {
+  beforeAll(async () => {
     await ctx.plugin(LoggerConsole)
     await ctx.plugin(Database)
     await ctx.plugin(MemoryDriver)
   })
 
-  after(async () => {
+  afterAll(async () => {
     await ctx.database.dropAll()
     await ctx.database.stopAll()
   })

@@ -1,5 +1,5 @@
 import { $, Database } from '@cordisjs/plugin-database'
-import { expect } from 'chai'
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 
 interface Foo {
   id?: number
@@ -20,7 +20,7 @@ declare module '@cordisjs/plugin-database' {
 }
 
 function QueryOperators(database: Database) {
-  before(() => {
+  beforeAll(() => {
     database.extend('temp1', {
       id: 'unsigned',
       text: 'string',
@@ -45,7 +45,7 @@ namespace QueryOperators {
   export const comparison = function Comparison(database: Database, options: QueryOptions = {}) {
     const { nullableComparator = true } = options
 
-    before(async () => {
+    beforeAll(async () => {
       await database.remove('temp1', {})
       await database.create('temp1', {
         text: 'awesome foo',
@@ -130,7 +130,7 @@ namespace QueryOperators {
   }
 
   export const existence = function Existence(database: Database) {
-    before(async () => {
+    beforeAll(async () => {
       await database.remove('temp1', {})
       await database.create('temp1', { date: new Date('2010-01-01') })
       await database.create('temp1', { date: new Date('2020-01-01') })
@@ -155,7 +155,7 @@ namespace QueryOperators {
   }
 
   export const membership = function Membership(database: Database) {
-    before(async () => {
+    beforeAll(async () => {
       await database.remove('temp1', {})
       await database.create('temp1', { value: 3 })
       await database.create('temp1', { value: 4 })
@@ -205,7 +205,7 @@ namespace QueryOperators {
   export const regexp = function RegularExpression(database: Database, options: RegExpOptions = {}) {
     const { regexBy = true, regexFor = true } = options
 
-    before(async () => {
+    beforeAll(async () => {
       await database.remove('temp1', {})
       await database.create('temp1', { text: 'awesome foo', regex: 'foo' })
       await database.create('temp1', { text: 'awesome bar', regex: 'bar' })
@@ -276,7 +276,7 @@ namespace QueryOperators {
   }
 
   export const bitwise = function Bitwise(database: Database) {
-    before(async () => {
+    beforeAll(async () => {
       await database.remove('temp1', {})
       await database.create('temp1', { value: 3 })
       await database.create('temp1', { value: 4 })
@@ -343,7 +343,7 @@ namespace QueryOperators {
   export const list = function List(database: Database, options: ListOptions = {}) {
     const { size = true, element = true, elementQuery = element } = options
 
-    before(async () => {
+    beforeAll(async () => {
       await database.remove('temp1', {})
       await database.create('temp1', { id: 1, list: [] })
       await database.create('temp1', { id: 2, list: [23] })
@@ -388,7 +388,7 @@ namespace QueryOperators {
   }
 
   export const evaluation = function Evaluation(database: Database) {
-    before(async () => {
+    beforeAll(async () => {
       await database.remove('temp1', {})
       await database.create('temp1', { id: 1, value: 8 })
       await database.create('temp1', { id: 2, value: 7 })
@@ -404,7 +404,7 @@ namespace QueryOperators {
 
   namespace Logical {
     export const queryLevel = function LogicalQueryLevel(database: Database) {
-      before(async () => {
+      beforeAll(async () => {
         await database.remove('temp1', {})
         await database.create('temp1', { id: 1 })
         await database.create('temp1', { id: 2 })
@@ -460,7 +460,7 @@ namespace QueryOperators {
     }
 
     export const fieldLevel = function LogicalFieldLevel(database: Database) {
-      before(async () => {
+      beforeAll(async () => {
         await database.remove('temp1', {})
         await database.create('temp1', { id: 1 })
         await database.create('temp1', { id: 2 })

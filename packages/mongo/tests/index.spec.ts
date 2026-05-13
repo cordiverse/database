@@ -3,11 +3,12 @@ import Database from '@cordisjs/plugin-database'
 import MongoDriver from '@cordisjs/plugin-database-mongo'
 import LoggerConsole from '@cordisjs/plugin-logger-console'
 import test from '@cordisjs/database-tests'
+import { afterAll, beforeAll, describe } from 'vitest'
 
 describe('@cordisjs/plugin-database-mongo', () => {
   const ctx = new Context()
 
-  before(async () => {
+  beforeAll(async () => {
     await ctx.plugin(LoggerConsole)
     await ctx.plugin(Database)
     await ctx.plugin(MongoDriver, {
@@ -18,7 +19,7 @@ describe('@cordisjs/plugin-database-mongo', () => {
     })
   })
 
-  after(async () => {
+  afterAll(async () => {
     await ctx.database.dropAll()
     await ctx.database.stopAll()
   })
@@ -30,7 +31,7 @@ describe('@cordisjs/plugin-database-mongo', () => {
       }
     },
     transaction: {
-      abort: false
+      abort: !!process.env.TEST_TRANSACTION_ABORT
     }
   })
 })

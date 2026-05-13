@@ -1,6 +1,6 @@
 import { mapValues, isNullable, deduplicate, omit } from 'cosmokit'
 import { $, Database, Field, getCell, Tables, Type, unravel } from '@cordisjs/plugin-database'
-import { expect } from 'chai'
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 
 interface DType {
   id: number
@@ -110,7 +110,7 @@ function flatten(type: any, prefix) {
 }
 
 function ModelOperations(database: Database) {
-  before(() => {
+  beforeAll(() => {
     database.define('bigint2', {
       type: 'string',
       dump: value => isNullable(value) ? value : value.toString(),

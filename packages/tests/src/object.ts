@@ -1,5 +1,5 @@
 import { $, Database } from '@cordisjs/plugin-database'
-import { expect } from 'chai'
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 
 interface ObjectModel {
   id: string
@@ -23,7 +23,7 @@ declare module '@cordisjs/plugin-database' {
 }
 
 function ObjectOperations(database: Database) {
-  before(() => {
+  beforeAll(() => {
     database.extend('object', {
       'id': 'string',
       'meta.a': { type: 'string', initial: '666' },
