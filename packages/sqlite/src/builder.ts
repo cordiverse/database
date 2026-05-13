@@ -1,6 +1,6 @@
 import { Builder, escapeId } from '@cordisjs/sql-utils'
 import { Binary, Dict, isNullable } from 'cosmokit'
-import { bufferToUuid, Driver, Field, isEvalExpr, Model, randomId, RegExpLike, Type, uuidToBuffer } from '@cordisjs/plugin-database'
+import { Driver, Field, isEvalExpr, Model, randomId, RegExpLike, Type } from '@cordisjs/plugin-database'
 
 export class SQLiteBuilder extends Builder {
   protected escapeMap = {
@@ -60,20 +60,8 @@ export class SQLiteBuilder extends Builder {
     this.transformers['uuid'] = {
       encode: value => `hex(${value})`,
       decode: value => `unhex(${value})`,
-      load: value => {
-        if (isNullable(value)) return value
-        if (typeof value === 'string') {
-          if (!value) return null
-          if (value.length === 36) return value
-          return bufferToUuid(Binary.fromHex(value))
-        }
-        return bufferToUuid(value)
-      },
-      dump: value => {
-        if (isNullable(value)) return value
-        if (typeof value === 'string') return value
-        return bufferToUuid(value)
-      },
+      load: value => isNullable(value) || typeof value === 'object' ? value : !value ? null : Binary.fromHex(value),
+      dump: value => isNullable(value) || typeof value === 'string' ? value : Binary.toHex(value),
     }
   }
 

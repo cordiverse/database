@@ -104,16 +104,8 @@ export class MySQLBuilder extends Builder {
       this.transformers['uuid'] = {
         encode: value => `bin_to_uuid(${value})`,
         decode: value => `uuid_to_bin(${value})`,
-        load: value => {
-          if (isNullable(value)) return value
-          if (typeof value === 'string') return value
-          return bufferToUuid(value)
-        },
-        dump: value => {
-          if (isNullable(value)) return value
-          if (typeof value === 'string') return value
-          return Buffer.from(uuidToBuffer(value))
-        },
+        load: value => isNullable(value) || typeof value === 'object' ? value : Buffer.from(uuidToBuffer(value)),
+        dump: value => isNullable(value) || typeof value === 'string' ? value : bufferToUuid(value),
       }
     }
 
