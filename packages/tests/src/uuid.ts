@@ -1,4 +1,4 @@
-import { Database } from '@cordisjs/plugin-database'
+import { $, Database } from '@cordisjs/plugin-database'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 
 interface UuidRow {
@@ -84,6 +84,10 @@ function UuidOperations(database: Database) {
     const byId = await database.get('uuidParents', { id: u1 })
     expect(byId).to.have.length(1)
     expect(byId[0]).to.deep.include({ id: u1, name: 'parent-1' })
+
+    const byEval = await database.get('uuidParents', r => $.eq(r.id, $.literal(u1, 'uuid')))
+    expect(byEval).to.have.length(1)
+    expect(byEval[0]).to.deep.include({ id: u1, name: 'parent-1' })
 
     const byIn = await database.get('uuidParents', { id: { $in: [u1, u3] } })
     expect(byIn.map(x => x.id)).to.have.members([u1])

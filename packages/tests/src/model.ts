@@ -43,6 +43,7 @@ interface DType {
   bnum?: number
   bnum2?: number
   text2?: string
+  uuid?: string
 }
 
 interface DObject {
@@ -253,6 +254,10 @@ function ModelOperations(database: Database) {
         initial: 0,
       },
       text2: 'string2',
+      uuid: {
+        type: 'uuid',
+        initial: '00000000-0000-0000-0000-000000000000',
+      },
     }
 
     const baseObject = {
@@ -300,7 +305,7 @@ namespace ModelOperations {
     { id: 11, bigint: BigInt(1e63) },
     { id: 12, decimal: 2.432, int64: 9223372036854775806n },
     { id: 13, bnum: 114514, bnum2: 12345 },
-    { id: 14, object: { embed: { custom: { a: 'abc', b: 123 } } } },
+    { id: 14, object: { embed: { custom: { a: 'abc', b: 123 } } }, uuid: '550e8400-e29b-41d4-a716-446655440000' },
   ]
 
   const dobjectTable: DObject[] = [

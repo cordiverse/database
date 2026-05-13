@@ -164,9 +164,6 @@ export class MySQLBuilder extends Builder {
   }
 
   escapePrimitive(value: any, type?: Type) {
-    if (type?.type === 'uuid' && typeof value === 'string' && !this.compat.uuid) {
-      return `uuid_to_bin(${this.quote(value)})`
-    }
     if (value instanceof Date) {
       value = Time.template('yyyy-MM-dd hh:mm:ss.SSS', value)
     } else if (value instanceof RegExp) {

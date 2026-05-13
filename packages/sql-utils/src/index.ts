@@ -182,8 +182,8 @@ export class Builder {
       $lte: this.binary('<='),
 
       // membership
-      $in: ([key, value]) => this.asEncoded(this.createMemberQuery(this.parseEval(key, false), value, ''), false),
-      $nin: ([key, value]) => this.asEncoded(this.createMemberQuery(this.parseEval(key, false), value, ' NOT'), false),
+      $in: ([key, value]) => this.asEncoded(this.createMemberQuery(this.parseEval(key, false), value, '', key), false),
+      $nin: ([key, value]) => this.asEncoded(this.createMemberQuery(this.parseEval(key, false), value, ' NOT', key), false),
 
       // typecast
       $literal: ([value, type]) => this.escape(value, type as any),
@@ -211,20 +211,20 @@ export class Builder {
     return `${key} is ${value ? 'not ' : ''}null`
   }
 
-  protected createMemberQuery(key: string, value: any, notStr = '') {
+  protected createMemberQuery(key: string, value: any, notStr = '', rawKey?: any) {
     if (Array.isArray(value)) {
       if (!value.length) return notStr ? this.$true : this.$false
       if (Array.isArray(value[0])) {
         return `(${key})${notStr} in (${value.map((val: any[]) => `(${val.map(x => this.escape(x, this.state.fieldType)).join(', ')})`).join(', ')})`
       }
-      return `${key}${notStr} in (${value.map(val => this.escape(val, this.state.fieldType)).join(', ')})`
+      return `${key}${notStr} in (${value.map(val => isEvalExpr(val) ? this.parseEval(val, false) : this.escape(val, this.state.fieldType)).join(', ')})`
     } else if (value.$exec) {
       return `(${key})${notStr} in ${this.parseSelection(value.$exec, true)}`
     } else if (Type.fromTerm(value)?.type === 'list') {
       const res = this.listContains(this.parseEval(value), key)
       return notStr ? this.logicalNot(res) : res
     } else {
-      const res = this.jsonContains(this.parseEval(value, false), this.encode(key, true, true))
+      const res = this.jsonContains(this.parseEval(value, false), !rawKey || isEvalExpr(rawKey) ? this.encode(key, true, true) : this.escape(rawKey, 'json'))
       return notStr ? this.logicalNot(res) : res
     }
   }
