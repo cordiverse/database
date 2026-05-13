@@ -1,5 +1,5 @@
 import { Database } from '@cordisjs/plugin-database'
-import { expect } from 'chai'
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 
 interface UuidRow {
   id: number
@@ -31,7 +31,7 @@ const u2 = '00112233-4455-6677-8899-aabbccddeeff'
 const u3 = 'ffffffff-eeee-dddd-cccc-bbbbbbbbbbbb'
 
 function UuidOperations(database: Database) {
-  before(() => {
+  beforeAll(() => {
     database.extend('uuids', {
       id: 'unsigned',
       value: {
