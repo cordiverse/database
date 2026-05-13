@@ -1,5 +1,5 @@
 import { $, Database, Tables } from '@cordisjs/plugin-database'
-import { expect } from 'chai'
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 
 interface Bar {
   id: number
@@ -19,7 +19,7 @@ declare module '@cordisjs/plugin-database' {
 }
 
 function TransactionOperations(database: Database) {
-  before(() => {
+  beforeAll(() => {
     database.extend('temptx', {
       id: 'unsigned',
       text: 'string',

@@ -1,6 +1,7 @@
 export * from './shape'
 
 import { Database } from '@cordisjs/plugin-database'
+import { beforeAll, describe } from 'vitest'
 import ModelOperations from './model'
 import QueryOperators from './query'
 import UpdateOperators from './update'
@@ -13,7 +14,7 @@ import Relation from './relation'
 import Performance from './performance'
 import './setup'
 
-export { expect } from 'chai'
+export { expect } from 'vitest'
 
 const Keywords = ['name']
 type Keywords = 'name'
@@ -26,15 +27,6 @@ type DatabaseLike = Database | (() => Database) | { model: Database }
 
 type Unit<T> = ((source: DatabaseLike, options?: UnitOptions<T>, overrideOptions?: UnitOptions<T>) => void) & {
   [K in keyof T as Exclude<K, Keywords>]: Unit<T[K]>
-}
-
-function setValue(obj: any, path: string, value: any) {
-  if (path.includes('.')) {
-    const index = path.indexOf('.')
-    setValue(obj[path.slice(0, index)] ??= {}, path.slice(index + 1), value)
-  } else {
-    obj[path] = value
-  }
 }
 
 function resolveGetDb(source: DatabaseLike): () => Database {
@@ -66,15 +58,6 @@ function createUnit<T>(target: T, root = false): Unit<T> {
         if (overrideOptions && !overrideOptions[key]) continue
         if (options[key] === false || Keywords.includes(key)) continue
         test[key](getDb, options[key], overrideOptions?.[key] === true ? undefined : overrideOptions?.[key])
-      }
-    }
-
-    if (root) {
-      process.argv.filter(x => x.startsWith('--+')).forEach(x => setValue(options, x.slice(3), true))
-      process.argv.filter(x => x.startsWith('---')).forEach(x => setValue(options, x.slice(3), false))
-      if (process.argv.some(x => x.startsWith('--!'))) {
-        overrideOptions = {}
-        process.argv.filter(x => x.startsWith('--!')).forEach(x => setValue(overrideOptions, x.slice(3), true))
       }
     }
 

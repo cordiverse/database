@@ -1,6 +1,6 @@
 import { $, Database, Tables } from '@cordisjs/plugin-database'
 import { deepEqual, omit } from 'cosmokit'
-import { expect } from 'chai'
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 
 interface Bar {
   id: number
@@ -31,7 +31,7 @@ declare module '@cordisjs/plugin-database' {
 }
 
 function OrmOperations(database: Database) {
-  before(() => {
+  beforeAll(() => {
     database.extend('temp2', {
       id: 'unsigned',
       text: 'string',

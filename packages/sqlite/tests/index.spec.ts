@@ -3,11 +3,12 @@ import Database from '@cordisjs/plugin-database'
 import SQLiteDriver from '@cordisjs/plugin-database-sqlite'
 import LoggerConsole from '@cordisjs/plugin-logger-console'
 import test from '@cordisjs/database-tests'
+import { afterAll, beforeAll, describe } from 'vitest'
 
 describe('@cordisjs/plugin-database-sqlite', () => {
   const ctx = new Context()
 
-  before(async () => {
+  beforeAll(async () => {
     await ctx.plugin(LoggerConsole)
     await ctx.plugin(Database)
     await ctx.plugin(SQLiteDriver, {
@@ -15,7 +16,7 @@ describe('@cordisjs/plugin-database-sqlite', () => {
     })
   })
 
-  after(async () => {
+  afterAll(async () => {
     await ctx.database.dropAll()
     await ctx.database.stopAll()
   })

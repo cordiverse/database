@@ -1,5 +1,5 @@
 import { $, Database, Relation, Tables } from '@cordisjs/plugin-database'
-import { expect } from 'chai'
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { setup } from './utils'
 
 interface User {
@@ -84,7 +84,7 @@ declare module '@cordisjs/plugin-database' {
 }
 
 function RelationTests(database: Database) {
-  before(async () => {
+  beforeAll(async () => {
     database.extend('user', {
       id: 'unsigned',
       value: 'integer',

@@ -4,6 +4,7 @@ import MongoDriver from '@cordisjs/plugin-database-mongo'
 import LoggerConsole from '@cordisjs/plugin-logger-console'
 import { ObjectId } from 'mongodb'
 import { expect } from '@cordisjs/database-tests'
+import { afterAll, beforeAll, describe, it } from 'vitest'
 
 interface Foo {
   id?: number
@@ -69,25 +70,25 @@ describe('@cordisjs/plugin-database-mongo/migrate-virtualKey', () => {
     fiber = await ctx.plugin(MongoDriver, {
       host: 'localhost',
       port: 27017,
-      database: 'test',
+      database: 'test_migrate',
       optimizeIndex,
     })
     database.refresh()
   }
 
-  before(async () => {
+  beforeAll(async () => {
     await ctx.plugin(Database)
     await ctx.plugin(LoggerConsole)
     fiber = await ctx.plugin(MongoDriver, {
       host: 'localhost',
       port: 27017,
-      database: 'test',
+      database: 'test_migrate',
       optimizeIndex: false,
     })
     database = ctx.model as Database
   })
 
-  after(async () => {
+  afterAll(async () => {
     await database.dropAll()
     await fiber?.dispose()
   })

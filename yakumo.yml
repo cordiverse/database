@@ -1,4 +1,4 @@
 - name: yakumo
 - name: yakumo-esbuild
-- name: yakumo-mocha
+- name: yakumo-vitest
 - name: yakumo-tsc

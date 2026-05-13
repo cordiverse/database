@@ -1,5 +1,5 @@
 import { Database } from '@cordisjs/plugin-database'
-import { expect } from 'chai'
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { deepEqual, noop, omit } from 'cosmokit'
 
 interface Qux {
