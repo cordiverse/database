@@ -11,6 +11,7 @@ interface Foo {
   date?: Date
   time?: Date
   regex?: string
+  pattern?: string
 }
 
 declare module '@cordisjs/plugin-database' {
@@ -31,6 +32,7 @@ function QueryOperators(database: Database) {
       date: 'date',
       time: 'time',
       regex: 'string',
+      pattern: 'string',
     }, {
       autoInc: true,
     })
@@ -272,6 +274,60 @@ namespace QueryOperators {
       await expect(database.get('temp1', row => $.regex(row.text, /^.*bAr.*$/i))).eventually.to.have.length(2)
       await expect(database.get('temp1', row => $.regex(row.text, /^.*bAr.*$/))).eventually.to.have.length(0)
       await expect(database.get('temp1', row => $.regex(row.text, '^.*bAr.*$', 'i'))).eventually.to.have.length(2)
+    })
+  }
+
+  export const text = function Text(database: Database) {
+    beforeAll(async () => {
+      await database.remove('temp1', {})
+      await database.create('temp1', { text: 'hello world', pattern: 'hello' })
+      await database.create('temp1', { text: '100%juice', pattern: '100%' })
+      await database.create('temp1', { text: 'a_b', pattern: 'a_' })
+      await database.create('temp1', { text: '!important', pattern: '!' })
+      await database.create('temp1', { text: '!%_test', pattern: '!%_' })
+      await database.create('temp1', { text: 'Hello World', pattern: 'Hello' })
+      await database.create('temp1', { text: '*.log', pattern: '*' })
+      await database.create('temp1', { text: '?query', pattern: '?' })
+      await database.create('temp1', { text: '[tag]', pattern: '[' })
+      await database.create('temp1', { text: '.hidden', pattern: '.' })
+      await database.create('temp1', { text: '^anchor', pattern: '^' })
+      await database.create('temp1', { text: '$money', pattern: '$' })
+    })
+
+    it('$.startsWith', async () => {
+      await expect(database.get('temp1', row => $.startsWith(row.text, 'hello'))).eventually.to.have.length(1)
+      await expect(database.get('temp1', row => $.startsWith(row.text, '100%'))).eventually.to.have.length(1)
+      await expect(database.get('temp1', row => $.startsWith(row.text, 'a_'))).eventually.to.have.length(1)
+      await expect(database.get('temp1', row => $.startsWith(row.text, '!'))).eventually.to.have.length(2)
+      await expect(database.get('temp1', row => $.startsWith(row.text, '!%_'))).eventually.to.have.length(1)
+      await expect(database.get('temp1', row => $.startsWith(row.text, 'Hello'))).eventually.to.have.length(1)
+      await expect(database.get('temp1', row => $.startsWith(row.text, 'hello'))).eventually.to.have.length(1)
+      await expect(database.get('temp1', row => $.startsWith(row.text, '.'))).eventually.to.have.length(1)
+      await expect(database.get('temp1', row => $.startsWith(row.text, '^'))).eventually.to.have.length(1)
+      await expect(database.get('temp1', row => $.startsWith(row.text, '$'))).eventually.to.have.length(1)
+      await expect(database.get('temp1', row => $.startsWith(row.text, '*'))).eventually.to.have.length(1)
+      await expect(database.get('temp1', row => $.startsWith(row.text, '?'))).eventually.to.have.length(1)
+      await expect(database.get('temp1', row => $.startsWith(row.text, '['))).eventually.to.have.length(1)
+      await expect(database.get('temp1', row => $.startsWith(row.text, 'nomatch'))).eventually.to.have.length(0)
+      await expect(database.get('temp1', row => $.startsWith(row.text, row.pattern))).eventually.to.have.length(12)
+      await expect(database.get('temp1', row => $.startsWith('hello world', row.pattern))).eventually.to.have.length(1)
+    })
+
+    it('$startsWith', async () => {
+      await expect(database.get('temp1', { text: { $startsWith: 'hello' } })).eventually.to.have.length(1)
+      await expect(database.get('temp1', { text: { $startsWith: '100%' } })).eventually.to.have.length(1)
+      await expect(database.get('temp1', { text: { $startsWith: 'a_' } })).eventually.to.have.length(1)
+      await expect(database.get('temp1', { text: { $startsWith: '!' } })).eventually.to.have.length(2)
+      await expect(database.get('temp1', { text: { $startsWith: '!%_' } })).eventually.to.have.length(1)
+      await expect(database.get('temp1', { text: { $startsWith: 'Hello' } })).eventually.to.have.length(1)
+      await expect(database.get('temp1', { text: { $startsWith: 'hello' } })).eventually.to.have.length(1)
+      await expect(database.get('temp1', { text: { $startsWith: '.' } })).eventually.to.have.length(1)
+      await expect(database.get('temp1', { text: { $startsWith: '^' } })).eventually.to.have.length(1)
+      await expect(database.get('temp1', { text: { $startsWith: '$' } })).eventually.to.have.length(1)
+      await expect(database.get('temp1', { text: { $startsWith: '*' } })).eventually.to.have.length(1)
+      await expect(database.get('temp1', { text: { $startsWith: '?' } })).eventually.to.have.length(1)
+      await expect(database.get('temp1', { text: { $startsWith: '[' } })).eventually.to.have.length(1)
+      await expect(database.get('temp1', { text: { $startsWith: 'nomatch' } })).eventually.to.have.length(0)
     })
   }
 

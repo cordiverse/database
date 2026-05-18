@@ -34,6 +34,7 @@ export namespace Query {
     // regexp
     $regex?: Extract<T, string, string | RegExpLike>
     $regexFor?: Extract<T, string, string | { input: string; flags?: string }>
+    $startsWith?: Extract<T, string, string>
 
     // bitwise
     $bitsAllClear?: Extract<T, number>
@@ -99,6 +100,7 @@ const queryOperators: QueryOperators = {
   // regexp
   $regex: (query, data) => makeRegExp(query).test(data),
   $regexFor: (query, data) => typeof query === 'string' ? makeRegExp(data).test(query) : makeRegExp(data, query.flags).test(query.input),
+  $startsWith: (query, data) => data.startsWith(query),
 
   // bitwise
   $bitsAllSet: (query, data) => (query & data) === query,
