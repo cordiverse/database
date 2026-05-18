@@ -1,11 +1,12 @@
 import { Builder, escapeId, isBracketed } from '@cordisjs/sql-utils'
 import { Binary, Dict, isNullable, Time } from 'cosmokit'
-import { Driver, Field, isAggrExpr, isEvalExpr, Model, randomId, Selection, Type } from '@cordisjs/plugin-database'
+import { bufferToUuid, Driver, Field, isAggrExpr, isEvalExpr, Model, randomId, Selection, Type, uuidToBuffer } from '@cordisjs/plugin-database'
 
 export interface Compat {
   maria?: boolean
   maria105?: boolean
   mysql57?: boolean
+  uuid?: boolean
   timezone?: string
 }
 
@@ -94,6 +95,18 @@ export class MySQLBuilder extends Builder {
       decode: value => `from_base64(${value})`,
       load: value => isNullable(value) || typeof value === 'object' ? value : Binary.fromBase64(value),
       dump: value => isNullable(value) || typeof value === 'string' ? value : Binary.toBase64(value),
+    }
+
+    if (!compat.uuid) {
+      // MySQL 8.0 has bin_to_uuid / uuid_to_bin built-in;
+      // MySQL 5.7 & MariaDB <10.7 get polyfills via _setupCompatFunctions.
+      // MariaDB 10.7+ uses the native UUID type in JSON, no wrapping needed.
+      this.transformers['uuid'] = {
+        encode: value => `bin_to_uuid(${value})`,
+        decode: value => `uuid_to_bin(${value})`,
+        load: value => isNullable(value) || typeof value === 'object' ? value : Buffer.from(uuidToBuffer(value)),
+        dump: value => isNullable(value) || typeof value === 'string' ? value : bufferToUuid(value),
+      }
     }
 
     this.transformers['date'] = {

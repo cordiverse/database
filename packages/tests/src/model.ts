@@ -43,6 +43,7 @@ interface DType {
   bnum?: number
   bnum2?: number
   text2?: string
+  uuid?: string
 }
 
 interface DObject {
@@ -253,6 +254,10 @@ function ModelOperations(database: Database) {
         initial: 0,
       },
       text2: 'string2',
+      uuid: {
+        type: 'uuid',
+        initial: '00000000-0000-0000-0000-000000000000',
+      },
     }
 
     const baseObject = {
@@ -285,6 +290,7 @@ function ModelOperations(database: Database) {
 
 namespace ModelOperations {
   const magicBorn = new Date('1970/08/17')
+  const u1 = '550e8400-e29b-41d4-a716-446655440000'
 
   const dtypeTable: DType[] = [
     { id: 1, bool: false },
@@ -300,12 +306,12 @@ namespace ModelOperations {
     { id: 11, bigint: BigInt(1e63) },
     { id: 12, decimal: 2.432, int64: 9223372036854775806n },
     { id: 13, bnum: 114514, bnum2: 12345 },
-    { id: 14, object: { embed: { custom: { a: 'abc', b: 123 } } } },
+    { id: 14, object: { embed: { custom: { a: 'abc', b: 123 } } }, uuid: u1 },
   ]
 
   const dobjectTable: DObject[] = [
     { id: 1 },
-    { id: 2, foo: { nested: { id: 1, int64: 123n, list: ['1', '1', '4'], array: [1, 1, 4], object: { num: 10, text: 'ab', embed: { bool: false, bigint: BigInt(1e163), custom: { a: '?', b: 8 }, bstr: 'wo' } }, bigint: BigInt(1e63), bnum: 114514, bnum2: 12345 } } },
+    { id: 2, foo: { nested: { id: 1, int64: 123n, list: ['1', '1', '4'], array: [1, 1, 4], object: { num: 10, text: 'ab', embed: { bool: false, bigint: BigInt(1e163), custom: { a: '?', b: 8 }, bstr: 'wo' } }, bigint: BigInt(1e63), bnum: 114514, bnum2: 12345, uuid: u1 } } },
     { id: 3, bar: { nested: { id: 1, list: ['1', '1', '4'], array: [1, 1, 4], object: { num: 10, text: 'ab', embed: { bool: false, bigint: BigInt(1e163), custom: { a: '?', b: 8 }, bstr: 'wo' } }, bigint: BigInt(1e63), bnum: 114514, bnum2: 12345 } } },
     { id: 4, baz: [{ nested: { id: 1, list: ['1', '1', '4'], array: [1, 1, 4], object: { num: 10, text: 'ab', embed: { bool: false, bigint: BigInt(1e163), custom: { a: '?', b: 8 }, bstr: 'wo' } }, bigint: BigInt(1e63), bnum: 114514, bnum2: 12345 } }, { nested: { id: 2 } }] },
     { id: 5, foo: { nested: { id: 1, list: ['1', '1', '4'], array: [1, 1, 4], object2: { num: 10, text: 'ab', embed: { bool: false, bigint: BigInt(1e163) } }, bigint: BigInt(1e63), bnum: 114514, bnum2: 12345 } } },
@@ -666,6 +672,11 @@ namespace ModelOperations {
       await setup(database, 'dobjects', dobjectTable)
       await expect(database.get('dobjects', row => $.eq(row.baz[0].nested.id, 1))).to.eventually.have.length(2)
       await expect(database.get('dobjects', row => $.eq(row.baz[0].nested.array[0], 1))).to.eventually.have.length(2)
+    })
+
+    nullableComparator && it('decode uuid', async () => {
+      await setup(database, 'dobjects', dobjectTable)
+      await expect(database.get('dobjects', row => $.eq(row.foo!.nested!.uuid!, $.literal(u1, 'uuid')))).to.eventually.have.length(1)
     })
   }
 }
