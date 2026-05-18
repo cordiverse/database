@@ -32,7 +32,6 @@ export class PostgresBuilder extends Builder {
 
     this.queryOperators = {
       ...this.queryOperators,
-      $regex: (key, value) => this.createRegExpQuery(key, value),
       $regexFor: (key, value) => typeof value === 'string' ? `${this.escape(value)} ~ ${key}`
         : `${this.escape(value.input)} ${value.flags?.includes('i') ? '~*' : '~'} ${key}`,
       $size: (key, value) => {
