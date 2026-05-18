@@ -5,8 +5,8 @@ import { bufferToUuid, Driver, Field, isAggrExpr, isEvalExpr, Model, randomId, S
 export interface Compat {
   maria?: boolean
   maria105?: boolean
-  uuid?: boolean
   mysql57?: boolean
+  uuid?: boolean
   timezone?: string
 }
 
