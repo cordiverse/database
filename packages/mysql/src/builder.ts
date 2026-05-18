@@ -33,6 +33,21 @@ export class MySQLBuilder extends Builder {
     super(driver, tables)
     this._dbTimezone = compat.timezone ?? 'SYSTEM'
 
+    this.queryOperators.$startsWith = (key, value) => {
+      const escaped = String(value).replace(/[!%_]/g, '!$&')
+      return `${key} LIKE BINARY ${this.escape(escaped + '%')} ESCAPE '!'`
+    }
+
+    this.evalOperators.$startsWith = ([key, prefix]) => {
+      const k = this.parseEval(key)
+      if (typeof prefix === 'string') {
+        const escaped = String(prefix).replace(/[!%_]/g, '!$&')
+        return `${k} LIKE BINARY ${this.escape(escaped + '%')} ESCAPE '!'`
+      }
+      const p = this.parseEval(prefix)
+      return `${k} LIKE BINARY concat(replace(replace(replace(${p}, '!', '!!'), '%', '!%'), '_', '!_'), '%') ESCAPE '!'`
+    }
+
     this.evalOperators.$select = (args) => {
       if (compat.maria || compat.mysql57) {
         return this.asEncoded(`json_object(${args.map(arg => this.parseEval(arg, false)).flatMap((x, i) => [`${i}`, x]).join(', ')})`, true)
