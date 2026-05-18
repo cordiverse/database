@@ -132,6 +132,15 @@ export class MemoryDriver extends Driver<MemoryDriver.Config> {
     return { matched }
   }
 
+  async setOne(sel: Selection.Mutable, data: {}) {
+    const { table, ref, query, model } = sel
+    const row = this.table(table).find(row => executeQuery(row, query, ref))
+    if (!row) return
+    executeUpdate(row, data, ref)
+    this.$save(table)
+    return model.parse(clone(row))
+  }
+
   async remove(sel: Selection.Mutable) {
     const { ref, query, table } = sel
     const data = this.table(table)

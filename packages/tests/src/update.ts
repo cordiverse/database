@@ -241,6 +241,50 @@ namespace OrmOperations {
     })
   }
 
+  export const setOne = function SetOne(database: Database) {
+    it('basic support', async () => {
+      const table = await setup(database, 'temp2', barTable)
+      const target = table.find(bar => bar.id === 2)!
+      target.text = 'updated'
+      await expect(database.setOne('temp2', { id: 2 }, { text: 'updated' })).to.eventually.have.shape(target)
+      target.text = 'updated2'
+      await expect(database.setOne('temp2', row => $.eq(row.id, 2), { text: 'updated2' })).to.eventually.have.shape(target)
+    })
+
+    it('no match returns undefined', async () => {
+      await setup(database, 'temp2', barTable)
+      await expect(database.setOne('temp2', { id: 9999 }, { text: 'nope' })).to.eventually.be.undefined
+    })
+
+    it('using expressions', async () => {
+      const table = await setup(database, 'temp2', barTable)
+      const target = table.find(bar => bar.id === 3)!
+      target.num = target.num! + 1
+      await expect(database.setOne('temp2', { id: 3 }, row => ({
+        num: $.add(row.num, 1),
+      }))).to.eventually.have.shape(target)
+    })
+
+    it('returns updated value not old', async () => {
+      await setup(database, 'temp2', barTable)
+      await expect(database.setOne('temp2', { id: 1 }, { text: 'new-value' })).to.eventually.have.property('text', 'new-value')
+    })
+
+    it('noop update returns existing row', async () => {
+      const table = await setup(database, 'temp2', barTable)
+      const target = table.find(bar => bar.id === 1)!
+      await expect(database.setOne('temp2', { id: 1 }, {})).to.eventually.have.shape(target)
+    })
+
+    it('advanced type', async () => {
+      const table = await setup(database, 'temp2', barTable)
+      const target = table.find(bar => bar.id === 1)!
+      target.binary = toBinary('world')
+      target.bigint = 1234567891011121314151617181920n
+      await expect(database.setOne('temp2', { id: 1 }, { binary: toBinary('world'), bigint: 1234567891011121314151617181920n })).to.eventually.have.shape(target)
+    })
+  }
+
   export const upsert = function Upsert(database: Database) {
     it('update existing records', async () => {
       const table = await setup(database, 'temp2', barTable)

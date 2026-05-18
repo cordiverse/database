@@ -69,7 +69,9 @@ export abstract class Driver<T = any> {
   abstract remove(sel: Selection.Mutable): Promise<Driver.WriteResult>
   abstract create(sel: Selection.Mutable, data: any): Promise<any>
   abstract upsert(sel: Selection.Mutable, data: any[], keys: string[]): Promise<Driver.WriteResult>
+  abstract setOne(sel: Selection.Mutable, data: Update): Promise<any>
   abstract withTransaction(callback: (session?: any) => Promise<void>): Promise<void>
+
   abstract getIndexes(table: string): Promise<Driver.Index[]>
   abstract createIndex(table: string, index: Driver.Index): Promise<void>
   abstract dropIndex(table: string, name: string): Promise<void>

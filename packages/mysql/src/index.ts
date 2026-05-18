@@ -416,6 +416,43 @@ INSERT INTO mtt VALUES(json_extract(j, concat('$[', i, ']'))); SET i=i+1; END WH
     return { matched: result.affectedRows, modified: result.changedRows }
   }
 
+  async setOne(sel: Selection.Mutable, data: {}) {
+    const { model, query, table, tables, ref } = sel
+    const builder = new MySQLBuilder(this, tables, this._compat)
+    const filter = builder.parseQuery(query)
+    const fields = model.availableFields()
+    if (filter === '0') return
+    const updateFields = [...new Set(Object.keys(data).map((key) => {
+      return Object.keys(fields).find(field => field === key || key.startsWith(field + '.'))!
+    }))]
+
+    const allFields = Object.keys(fields)
+    const setClauses = allFields.map((field) => {
+      const escaped = escapeId(field)
+      const expr = updateFields.includes(field)
+        ? builder.toUpdateExpr(data, field, fields[field], false)
+        : escaped
+      return `${escaped} = (@_${field} := ${expr})`
+    }).join(', ')
+
+    const selectExprs = allFields.map(f => `@_${f} AS ${escapeId(f)}`).join(', ')
+    const sql = [
+      ...builder.prequeries,
+      `UPDATE ${escapeId(table)} ${ref} SET ${setClauses} WHERE ${filter} LIMIT 1`,
+      `SELECT ${selectExprs}`,
+    ].join('; ')
+    const results = await this.query(sql)
+    // multi-statement: results is [OkPacket, RowDataPacket[]]
+    // find the UPDATE result to check affectedRows
+    const parts = Array.isArray(results[0]) || results[0]?.affectedRows !== undefined ? results : [results]
+    const updateResult = parts.find((r: any) => r?.affectedRows !== undefined)
+    if (!updateResult || updateResult.affectedRows === 0) return
+    const selectResult = parts[parts.length - 1]
+    const row = Array.isArray(selectResult) ? selectResult[0] : selectResult
+    if (!row) return
+    return builder.load(row, model)
+  }
+
   async remove(sel: Selection.Mutable) {
     const { query, table, tables } = sel
     const builder = new MySQLBuilder(this, tables, this._compat)
