@@ -427,25 +427,38 @@ INSERT INTO mtt VALUES(json_extract(j, concat('$[', i, ']'))); SET i=i+1; END WH
     }))]
 
     const allFields = Object.keys(fields)
-    const setClauses = allFields.map((field) => {
-      const escaped = escapeId(field)
-      const expr = updateFields.includes(field)
-        ? builder.toUpdateExpr(data, field, fields[field], false)
-        : escaped
-      return `${escaped} = (@_${field} := ${expr})`
+    const varname = (f: string) => `@_${f.replace(/\./g, '_')}`
+
+    const setClauses = allFields.filter(f => f in fields).map((field) => {
+      if (updateFields.includes(field)) {
+        return `${escapeId(field)} = (${varname(field)} := ${builder.toUpdateExpr(data, field, fields[field], false)})`
+      } else {
+        return `${escapeId(field)} = (${varname(field)} := ${escapeId(field)})`
+      }
+    })
+
+    const selectExprs = allFields.map((field) => {
+      const alias = escapeId(field)
+      if (field in fields) {
+        return `${varname(field)} AS ${alias}`
+      }
+      const parent = Object.keys(fields).find(k => field.startsWith(k + '.'))
+      if (parent) {
+        const rest = field.slice(parent.length + 1)
+        return `json_extract(${varname(parent)}, '$.${rest.split('.').map((k: string) => `"${k}"`).join('.')}') AS ${alias}`
+      }
+      return `${varname(field)} AS ${alias}`
     }).join(', ')
 
-    const selectExprs = allFields.map(f => `@_${f} AS ${escapeId(f)}`).join(', ')
     const sql = [
       ...builder.prequeries,
-      `UPDATE ${escapeId(table)} ${ref} SET ${setClauses} WHERE ${filter} LIMIT 1`,
+      `UPDATE ${escapeId(table)} ${ref} SET ${setClauses.join(', ')} WHERE ${filter} LIMIT 1`,
       `SELECT ${selectExprs}`,
     ].join('; ')
     const results = await this.query(sql)
-    // multi-statement: results is [OkPacket, RowDataPacket[]]
-    // find the UPDATE result to check affectedRows
+    // UPDATE is always the last result with affectedRows (before SELECT)
     const parts = Array.isArray(results[0]) || results[0]?.affectedRows !== undefined ? results : [results]
-    const updateResult = parts.find((r: any) => r?.affectedRows !== undefined)
+    const updateResult = parts[parts.length === 1 ? 0 : parts.length - 2]
     if (!updateResult || updateResult.affectedRows === 0) return
     const selectResult = parts[parts.length - 1]
     const row = Array.isArray(selectResult) ? selectResult[0] : selectResult
