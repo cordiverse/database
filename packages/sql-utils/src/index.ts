@@ -186,6 +186,7 @@ export class Builder {
       $literal: ([value, type]) => this.escape(value, type as any),
 
       // aggregation
+      $first: (expr) => this.parseEval(expr, false),
       $sum: (expr) => this.createAggr(expr, value => `ifnull(sum(${value}), 0)`),
       $avg: (expr) => this.createAggr(expr, value => `avg(${value})`),
       $min: (expr) => this.createAggr(expr, value => `min(${value})`),
