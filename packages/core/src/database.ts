@@ -510,6 +510,23 @@ export class Database extends Service {
     return sel._action('set', update).execute()
   }
 
+  async setOne<K extends Keys<Tables>>(
+    table: K,
+    query: Query<Tables[K]>,
+    update: Row.Computed<Tables[K], Update<Tables[K]>>,
+  ): Promise<Tables[K] | undefined> {
+    const sel = this.select(table, query, null)
+    if (typeof update === 'function') update = update(sel.row)
+    const primary = makeArray(sel.model.primary)
+    if (primary.some(key => key in update)) {
+      throw new TypeError(`cannot modify primary key`)
+    }
+
+    update = sel.model.format(update)
+    if (Object.keys(update).length === 0) return (await this.get(table, query))[0]
+    return sel._action('setOne', update).execute()
+  }
+
   async remove<K extends Keys<Tables>>(table: K, query: Query<Tables[K]>): Promise<Driver.WriteResult> {
     const sel = this.select(table, query, null)
     return sel._action('remove').execute()

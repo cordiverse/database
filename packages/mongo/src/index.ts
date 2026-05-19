@@ -388,6 +388,36 @@ export class MongoDriver extends Driver<MongoDriver.Config> {
     }
   }
 
+  async setOne(sel: Selection.Mutable, update: {}) {
+    const { query, table, model } = sel
+    if (hasSubquery(sel.query) || Object.values(update).some(x => hasSubquery(x))) {
+      await this.set(sel, update)
+      const rows = await this.get(sel)
+      return rows[0]
+    }
+
+    const filter = this.transformQuery(sel, query, table)
+    if (!filter) return
+    const coll = this.db.collection(table)
+
+    const virtualKey = this.getVirtualKey(table)
+    const transformer = new Builder(this, Object.keys(sel.tables), virtualKey, '$' + tempKey + '.')
+    const $set = this.mapVirtualUpdate(update, virtualKey, (item, key) => transformer.toUpdateExpr(item, model.getType(key)))
+    const $unset = Object.entries($set)
+      .filter(([_, value]) => typeof value === 'object')
+      .map(([key, _]) => key)
+    const preset = Object.fromEntries(transformer.walkedKeys.map(key => [tempKey + '.' + key, '$' + key]))
+
+    const result = await coll.findOneAndUpdate(filter, [
+      ...transformer.walkedKeys.length ? [{ $set: preset }] : [],
+      ...$unset.length ? [{ $unset }] : [],
+      { $set },
+      ...transformer.walkedKeys.length ? [{ $unset: [tempKey] }] : [],
+    ], { returnDocument: 'after', session: this.session })
+    if (!result) return
+    return this.builder.load(this.patchVirtual(table, result), model)
+  }
+
   async remove(sel: Selection.Mutable) {
     const { query, table } = sel
     const filter = this.transformQuery(sel, query, table)

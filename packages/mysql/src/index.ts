@@ -416,6 +416,56 @@ INSERT INTO mtt VALUES(json_extract(j, concat('$[', i, ']'))); SET i=i+1; END WH
     return { matched: result.affectedRows, modified: result.changedRows }
   }
 
+  async setOne(sel: Selection.Mutable, data: {}) {
+    const { model, query, table, tables, ref } = sel
+    const builder = new MySQLBuilder(this, tables, this._compat)
+    const filter = builder.parseQuery(query)
+    const fields = model.availableFields()
+    if (filter === '0') return
+    const updateFields = [...new Set(Object.keys(data).map((key) => {
+      return Object.keys(fields).find(field => field === key || key.startsWith(field + '.'))!
+    }))]
+
+    const allFields = Object.keys(fields)
+    const varname = (f: string) => `@_${f.replace(/\./g, '_')}`
+
+    const setClauses = allFields.filter(f => f in fields).map((field) => {
+      if (updateFields.includes(field)) {
+        return `${escapeId(field)} = (${varname(field)} := ${builder.toUpdateExpr(data, field, fields[field], false)})`
+      } else {
+        return `${escapeId(field)} = (${varname(field)} := ${escapeId(field)})`
+      }
+    })
+
+    const selectExprs = allFields.map((field) => {
+      const alias = escapeId(field)
+      if (field in fields) {
+        return `${varname(field)} AS ${alias}`
+      }
+      const parent = Object.keys(fields).find(k => field.startsWith(k + '.'))
+      if (parent) {
+        const rest = field.slice(parent.length + 1)
+        return `json_extract(${varname(parent)}, '$.${rest.split('.').map((k: string) => `"${k}"`).join('.')}') AS ${alias}`
+      }
+      return `${varname(field)} AS ${alias}`
+    }).join(', ')
+
+    const sql = [
+      ...builder.prequeries,
+      `UPDATE ${escapeId(table)} ${ref} SET ${setClauses.join(', ')} WHERE ${filter} LIMIT 1`,
+      `SELECT ${selectExprs}`,
+    ].join('; ')
+    const results = await this.query(sql)
+    // UPDATE is always the last result with affectedRows (before SELECT)
+    const parts = Array.isArray(results[0]) || results[0]?.affectedRows !== undefined ? results : [results]
+    const updateResult = parts[parts.length === 1 ? 0 : parts.length - 2]
+    if (!updateResult || updateResult.affectedRows === 0) return
+    const selectResult = parts[parts.length - 1]
+    const row = Array.isArray(selectResult) ? selectResult[0] : selectResult
+    if (!row) return
+    return builder.load(row, model)
+  }
+
   async remove(sel: Selection.Mutable) {
     const { query, table, tables } = sel
     const builder = new MySQLBuilder(this, tables, this._compat)

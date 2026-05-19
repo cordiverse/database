@@ -314,6 +314,27 @@ export class PostgresDriver extends Driver<PostgresDriver.Config> {
     return { matched: result.length }
   }
 
+  async setOne(sel: Selection.Mutable, data: {}) {
+    const { model, query, table, tables, ref } = sel
+    const builder = new PostgresBuilder(this, tables)
+    const filter = builder.parseQuery(query)
+    const fields = model.availableFields()
+    if (filter === '0') return
+    const updateFields = [...new Set(Object.keys(data).map((key) => {
+      return Object.keys(fields).find(field => field === key || key.startsWith(field + '.'))!
+    }))]
+
+    const update = updateFields.map((field) => {
+      const escaped = builder.escapeId(field)
+      return `${escaped} = ${builder.toUpdateExpr(data, field, fields[field], false)}`
+    }).join(', ')
+    const primaryFields = makeArray(model.primary).map(k => builder.escapeId(k))
+    const primaryTuple = primaryFields.length === 1 ? primaryFields[0] : `(${primaryFields.join(', ')})`
+    const subquery = `SELECT ${primaryFields.join(', ')} FROM ${builder.escapeId(table)} WHERE ${filter} LIMIT 1`
+    const result = await this.query(`UPDATE ${builder.escapeId(table)} ${ref} SET ${update} WHERE ${primaryTuple} = (${subquery}) RETURNING *`)
+    return result[0] ? builder.load(result[0], model) : undefined
+  }
+
   async remove(sel: Selection.Mutable) {
     const builder = new PostgresBuilder(this, sel.tables)
     const query = builder.parseQuery(sel.query)
