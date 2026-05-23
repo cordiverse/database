@@ -12,7 +12,7 @@ export type EvalOperators = {
   [K in keyof Eval.Static as `$${K}`]?: (expr: ExtractUnary<Parameters<Eval.Static[K]>>, group?: object) => any
 } & { $: (expr: any, group?: object) => any }
 
-const aggrKeys = ['$sum', '$avg', '$min', '$max', '$count', '$length', '$array']
+const aggrKeys = ['$first', '$sum', '$avg', '$min', '$max', '$count', '$length', '$array']
 
 export class Builder {
   private counter = 0
