@@ -154,3 +154,28 @@ export function isEmpty(value: any) {
   }
   return true
 }
+
+const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+export function uuidToBuffer(value: string): Uint8Array {
+  if (!uuidRegex.test(value)) throw new TypeError(`invalid uuid: ${value}`)
+  const hex = value.replace(/-/g, '')
+  const buffer = new Uint8Array(16)
+  for (let i = 0; i < 16; i++) {
+    buffer[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16)
+  }
+  return buffer
+}
+
+export function bufferToUuid(value: Uint8Array | ArrayBuffer | ArrayBufferView): string {
+  let bytes: Uint8Array
+  if (value instanceof Uint8Array) bytes = value
+  else if (value instanceof ArrayBuffer) bytes = new Uint8Array(value)
+  else bytes = new Uint8Array(value.buffer, value.byteOffset, value.byteLength)
+  if (bytes.byteLength !== 16) throw new TypeError(`invalid uuid buffer length: ${bytes.byteLength}`)
+  const hex: string[] = []
+  for (let i = 0; i < 16; i++) {
+    hex.push(bytes[i].toString(16).padStart(2, '0'))
+  }
+  return `${hex.slice(0, 4).join('')}-${hex.slice(4, 6).join('')}-${hex.slice(6, 8).join('')}-${hex.slice(8, 10).join('')}-${hex.slice(10, 16).join('')}`
+}

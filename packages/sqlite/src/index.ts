@@ -1,5 +1,5 @@
 import { Binary, deepEqual, Dict, difference, isNullable, makeArray, mapValues } from 'cosmokit'
-import { Driver, Eval, executeUpdate, Field, getCell, hasSubquery, isEvalExpr, Selection } from '@cordisjs/plugin-database'
+import { bufferToUuid, Driver, Eval, executeUpdate, Field, getCell, hasSubquery, isEvalExpr, Selection, uuidToBuffer } from '@cordisjs/plugin-database'
 import { escapeId } from '@cordisjs/sql-utils'
 import type { DatabaseSync, StatementSync } from 'node:sqlite'
 import enUS from './locales/en-US.yml'
@@ -29,6 +29,7 @@ function getTypeDef({ deftype: type }: Field) {
     case 'list':
     case 'json': return `TEXT`
     case 'binary': return `BLOB`
+    case 'uuid': return `BLOB`
     default: throw new Error(`unsupported type: ${type}`)
   }
 }
@@ -203,6 +204,12 @@ export class SQLiteDriver extends Driver<SQLiteDriver.Config> {
       types: ['binary'],
       dump: value => isNullable(value) ? value : new Uint8Array(value),
       load: value => isNullable(value) ? value : Binary.fromSource(value),
+    })
+
+    this.define<string, any>({
+      types: ['uuid'],
+      dump: value => isNullable(value) ? value : uuidToBuffer(value),
+      load: value => isNullable(value) || typeof value === 'string' ? value : bufferToUuid(value),
     })
 
     this.define<number, number | bigint>({

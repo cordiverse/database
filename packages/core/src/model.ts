@@ -130,7 +130,7 @@ export namespace Field {
   export type Type<T = any> =
     | T extends Primary ? 'primary'
     : T extends number ? 'integer' | 'unsigned' | 'float' | 'double' | 'decimal'
-    : T extends string ? 'char' | 'string' | 'text'
+    : T extends string ? 'char' | 'string' | 'text' | 'uuid'
     : T extends boolean ? 'boolean'
     : T extends Date ? 'timestamp' | 'date' | 'time'
     : T extends ArrayBuffer ? 'binary'

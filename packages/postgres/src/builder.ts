@@ -222,9 +222,9 @@ export class PostgresBuilder extends Builder {
     if (Array.isArray(value)) {
       if (!value.length) return notStr ? this.$true : this.$false
       if (Array.isArray(value[0])) {
-        return `(${key})${notStr} in (${value.map((val: any[]) => `(${val.map(x => this.escape(x)).join(', ')})`).join(', ')})`
+        return `(${key})${notStr} in (${value.map((val: any[]) => `(${val.map(x => this.escape(x, this.state.fieldType)).join(', ')})`).join(', ')})`
       }
-      return `${key}${notStr} in (${value.map(val => this.escape(val)).join(', ')})`
+      return `${key}${notStr} in (${value.map(val => isEvalExpr(val) ? this.parseEval(val, false) : this.escape(val, this.state.fieldType)).join(', ')})`
     } else if (value.$exec) {
       return `(${key})${notStr} in ${this.parseSelection(value.$exec, true)}`
     } else if (Type.fromTerm(value)?.type === 'list') {
