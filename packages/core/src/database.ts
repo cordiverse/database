@@ -204,6 +204,9 @@ export class Database extends Service {
     model.unique = model.unique.map(keys => typeof keys === 'string' ? model.fields[keys]!.relation?.fields || keys
       : keys.map(key => model.fields[key]!.relation?.fields || key).flat())
 
+    // refresh the type cache to pick up relation foreign key columns added above
+    defineProperty(model, 'type', Type.Object(mapValues(model.fields, field => Type.fromField(field!))) as any)
+
     this.prepareTasks[name] = this.prepare(name)
     ;(this.ctx as Context).emit('database/model', name)
   }

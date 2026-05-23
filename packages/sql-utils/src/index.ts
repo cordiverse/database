@@ -44,6 +44,9 @@ interface State {
   // current eval expr
   expr?: Eval.Expr
 
+  // current field type (used by parseFieldQuery → comparator → escape)
+  fieldType?: Type
+
   group?: boolean
   tables?: Dict<Model>
 
@@ -179,13 +182,14 @@ export class Builder {
       $lte: this.binary('<='),
 
       // membership
-      $in: ([key, value]) => this.asEncoded(this.createMemberQuery(this.parseEval(key, false), value, ''), false),
-      $nin: ([key, value]) => this.asEncoded(this.createMemberQuery(this.parseEval(key, false), value, ' NOT'), false),
+      $in: ([key, value]) => this.asEncoded(this.createMemberQuery(this.parseEval(key, false), value, '', key), false),
+      $nin: ([key, value]) => this.asEncoded(this.createMemberQuery(this.parseEval(key, false), value, ' NOT', key), false),
 
       // typecast
       $literal: ([value, type]) => this.escape(value, type as any),
 
       // aggregation
+      $first: (expr) => this.parseEval(expr, false),
       $sum: (expr) => this.createAggr(expr, value => `ifnull(sum(${value}), 0)`),
       $avg: (expr) => this.createAggr(expr, value => `avg(${value})`),
       $min: (expr) => this.createAggr(expr, value => `min(${value})`),
@@ -208,20 +212,20 @@ export class Builder {
     return `${key} is ${value ? 'not ' : ''}null`
   }
 
-  protected createMemberQuery(key: string, value: any, notStr = '') {
+  protected createMemberQuery(key: string, value: any, notStr = '', rawKey?: any) {
     if (Array.isArray(value)) {
       if (!value.length) return notStr ? this.$true : this.$false
       if (Array.isArray(value[0])) {
-        return `(${key})${notStr} in (${value.map((val: any[]) => `(${val.map(x => this.escape(x)).join(', ')})`).join(', ')})`
+        return `(${key})${notStr} in (${value.map((val: any[]) => `(${val.map(x => this.escape(x, this.state.fieldType)).join(', ')})`).join(', ')})`
       }
-      return `${key}${notStr} in (${value.map(val => this.escape(val)).join(', ')})`
+      return `${key}${notStr} in (${value.map(val => isEvalExpr(val) ? this.parseEval(val, false) : this.escape(val, this.state.fieldType)).join(', ')})`
     } else if (value.$exec) {
       return `(${key})${notStr} in ${this.parseSelection(value.$exec, true)}`
     } else if (Type.fromTerm(value)?.type === 'list') {
       const res = this.listContains(this.parseEval(value), key)
       return notStr ? this.logicalNot(res) : res
     } else {
-      const res = this.jsonContains(this.parseEval(value, false), this.encode(key, true, true))
+      const res = this.jsonContains(this.parseEval(value, false), !rawKey || isEvalExpr(rawKey) ? this.encode(key, true, true) : this.escape(rawKey, 'json'))
       return notStr ? this.logicalNot(res) : res
     }
   }
@@ -252,7 +256,7 @@ export class Builder {
 
   protected comparator(operator: string) {
     return (key: string, value: any) => {
-      return `${key} ${operator} ${this.escape(value)}`
+      return `${key} ${operator} ${this.escape(value, this.state.fieldType)}`
     }
   }
 
@@ -402,7 +406,10 @@ export class Builder {
         for (const key in flattenQuery) {
           const model = this.state.tables![this.state.table!] ?? Object.values(this.state.tables!)[0]
           const expr = Eval('', [this.state.table ?? Object.keys(this.state.tables!)[0], key], model.getType(key)!)
+          const prevType = this.state.fieldType
+          this.state.fieldType = model.getType(key)
           conditions.push(this.parseFieldQuery(this.parseEval(expr), flattenQuery[key]))
+          this.state.fieldType = prevType
         }
       }
     }

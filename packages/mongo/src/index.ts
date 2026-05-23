@@ -1,6 +1,9 @@
-import { BSONType, ClientSession, Collection, Db, IndexDescription, Long, MongoClient, MongoClientOptions, MongoError, ObjectId } from 'mongodb'
+import {
+  BSONType, ClientSession, Collection, Db, IndexDescription, Long, Binary as MongoBinary,
+  MongoClient, MongoClientOptions, MongoError, ObjectId,
+} from 'mongodb'
 import { Binary, deepEqual, Dict, isNullable, makeArray, mapValues, noop, omit, pick, remove } from 'cosmokit'
-import { Driver, Eval, executeUpdate, Field, hasSubquery, Query, RuntimeError, Selection } from '@cordisjs/plugin-database'
+import { bufferToUuid, Driver, Eval, executeUpdate, Field, hasSubquery, Query, RuntimeError, Selection, uuidToBuffer } from '@cordisjs/plugin-database'
 import { Builder } from './builder'
 import zhCN from './locales/zh-CN.yml'
 import enUS from './locales/en-US.yml'
@@ -73,6 +76,12 @@ export class MongoDriver extends Driver<MongoDriver.Config> {
       types: ['binary'],
       dump: value => isNullable(value) ? value : Buffer.from(value),
       load: value => isNullable(value) ? value : Binary.fromSource(value.buffer),
+    })
+
+    this.define<string, MongoBinary>({
+      types: ['uuid'],
+      dump: value => isNullable(value) ? value as any : new MongoBinary(Buffer.from(uuidToBuffer(value)), MongoBinary.SUBTYPE_UUID),
+      load: value => isNullable(value) || typeof value === 'string' ? value as any : bufferToUuid(value.buffer),
     })
 
     this.define<bigint, number | Long>({
