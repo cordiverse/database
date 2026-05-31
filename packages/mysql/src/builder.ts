@@ -1,11 +1,11 @@
 import { Builder, escapeId, isBracketed } from '@cordisjs/sql-utils'
 import { Binary, Dict, isNullable, Time } from 'cosmokit'
-import { bufferToUuid, Driver, Field, isAggrExpr, isEvalExpr, Model, randomId, Selection, Type, uuidToBuffer } from '@cordisjs/plugin-database'
+import { bufferToUuid, Driver, Field, isAggrExpr, isEvalExpr, Model, randomId, RegExpLike, Selection, Type, uuidToBuffer } from '@cordisjs/plugin-database'
 
 export interface Compat {
   maria?: boolean
-  maria105?: boolean
   mysql57?: boolean
+  ci?: boolean
   uuid?: boolean
   timezone?: string
 }
@@ -33,6 +33,21 @@ export class MySQLBuilder extends Builder {
   constructor(protected driver: Driver, tables?: Dict<Model>, private compat: Compat = {}) {
     super(driver, tables)
     this._dbTimezone = compat.timezone ?? 'SYSTEM'
+
+    if (this.compat.mysql57 || this.compat.maria) {
+      this.queryOperators.$regexFor = (key, value) => typeof value === 'string' ? `${this.escape(value)} ${this.compat.ci
+        ? 'collate utf8mb4_bin' : ''} regexp ${key}` : `${this.escape(value.input)} ${(!!value.flags?.includes('i') === !!this.compat.ci)
+        ? '' : this.compat.ci ? 'collate utf8mb4_bin' : 'collate utf8mb4_general_ci'} regexp ${key}`
+      this.evalOperators.$regex = ([key, value, flags]) => `(${this.parseEval(key)} ${
+        ((!!flags?.includes('i') || (value instanceof RegExp && value.flags.includes('i'))) === !!this.compat.ci)
+          ? '' : this.compat.ci ? 'collate utf8mb4_bin' : 'collate utf8mb4_general_ci'
+      } regexp ${this.parseEval(value)})`
+    } else {
+      this.queryOperators.$regexFor = (key, value) => typeof value === 'string' ? `regexp_like(${this.escape(value)}, ${key}, 'c')`
+        : `regexp_like(${this.escape(value.input)}, ${key}, ${value.flags?.includes('i') ? `'i'` : `'c'`})`
+      this.evalOperators.$regex = ([key, value, flags]) => `regexp_like(${this.parseEval(key)}, ${this.parseEval(value)}, ${
+        (flags?.includes('i') || (value instanceof RegExp && value.flags.includes('i'))) ? `'i'` : `'c'`})`
+    }
 
     this.evalOperators.$select = (args) => {
       if (compat.maria || compat.mysql57) {
@@ -140,6 +155,22 @@ export class MySQLBuilder extends Builder {
         return new Date(value)
       },
       dump: value => isNullable(value) ? value : Time.template('yyyy-MM-dd hh:mm:ss.SSS', value),
+    }
+  }
+
+  protected createRegExpQuery(key: string, value: string | RegExpLike) {
+    if (this.compat.mysql57) {
+      if (typeof value !== 'string' && value.flags?.includes('i')) {
+        return `${key} ${this.compat.ci ? '' : 'collate utf8mb4_general_ci'} regexp ${this.escape(value.source)}`
+      } else {
+        return `${key} ${this.compat.ci ? 'collate utf8mb4_bin' : ''} regexp ${this.escape(typeof value === 'string' ? value : value.source)}`
+      }
+    } else {
+      if (typeof value !== 'string' && value.flags?.includes('i')) {
+        return `${key} regexp ${this.escape('(?i)' + value.source)}`
+      } else {
+        return `${key} regexp ${this.escape('(?-i)' + (typeof value === 'string' ? value : value.source))}`
+      }
     }
   }
 

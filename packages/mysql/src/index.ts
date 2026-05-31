@@ -76,8 +76,6 @@ export class MySQLDriver extends Driver<MySQLDriver.Config> {
     const [version, timezone] = Object.values((await this.query(`SELECT version(), @@GLOBAL.time_zone`))[0]) as string[]
     // https://jira.mariadb.org/browse/MDEV-30623
     this._compat.maria = version.includes('MariaDB')
-    // https://jira.mariadb.org/browse/MDEV-26506
-    this._compat.maria105 = !!version.match(/10.5.\d+-MariaDB/)
     // For json_table
     this._compat.mysql57 = !!version.match(/5.7.\d+/)
     // MariaDB 10.7+ has the native UUID data type
@@ -89,6 +87,7 @@ export class MySQLDriver extends Driver<MySQLDriver.Config> {
       this._compat.uuid = major > 10 || (major === 10 && minor >= 7)
     }
 
+    this._compat.ci = this.config.charset?.toLowerCase().endsWith('ci')
     this._compat.timezone = timezone
 
     this.sql = new MySQLBuilder(this, undefined, this._compat)
@@ -641,6 +640,7 @@ export namespace MySQLDriver {
       user: z.string().default('root'),
       password: z.string().role('secret'),
       database: z.string().required(),
+      charset: z.string().default('utf8mb4_general_ci'),
     }),
     z.object({
       ssl: z.union([
