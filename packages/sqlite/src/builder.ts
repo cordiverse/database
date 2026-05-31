@@ -14,12 +14,26 @@ export class SQLiteBuilder extends Builder {
       : value.flags?.includes('i') ? `regexp2(${key}, ${this.escape(value.input)}, 'i')`
         : `${this.escape(value.input)} regexp ${key}`
 
+    this.queryOperators.$startsWith = (key, value) => {
+      const escaped = String(value).replace(/[*?[]/g, '[$&]')
+      return `${key} GLOB ${this.escape(escaped + '*')}`
+    }
+
     this.evalOperators.$if = (args) => `iif(${args.map(arg => this.parseEval(arg)).join(', ')})`
     this.evalOperators.$regex = ([key, value, flags]) => (flags?.includes('i') || (value instanceof RegExp && value.flags?.includes('i')))
       ? `regexp2(${this.parseEval(value)}, ${this.parseEval(key)}, ${this.escape(flags ?? (value as any).flags)})`
       : `regexp(${this.parseEval(value)}, ${this.parseEval(key)})`
 
     this.evalOperators.$concat = (args) => `(${args.map(arg => this.parseEval(arg)).join('||')})`
+    this.evalOperators.$startsWith = ([key, prefix]) => {
+      const k = this.parseEval(key)
+      if (typeof prefix === 'string') {
+        const escaped = String(prefix).replace(/[*?[]/g, '[$&]')
+        return `${k} GLOB ${this.escape(escaped + '*')}`
+      }
+      const p = this.parseEval(prefix)
+      return `${k} GLOB replace(replace(replace(${p}, '[', '[[]'), '*', '[*]'), '?', '[?]') || '*'`
+    }
     this.evalOperators.$modulo = ([left, right]) => `modulo(${this.parseEval(left)}, ${this.parseEval(right)})`
     this.evalOperators.$log = ([left, right]) => isNullable(right)
       ? `ln(${this.parseEval(left)})`

@@ -34,6 +34,10 @@ export class PostgresBuilder extends Builder {
       ...this.queryOperators,
       $regexFor: (key, value) => typeof value === 'string' ? `${this.escape(value)} ~ ${key}`
         : `${this.escape(value.input)} ${value.flags?.includes('i') ? '~*' : '~'} ${key}`,
+      $startsWith: (key, value) => {
+        const escaped = String(value).replace(/[!%_]/g, '!$&')
+        return `${key} LIKE ${this.escape(escaped + '%')} ESCAPE '!'`
+      },
       $size: (key, value) => {
         if (this.isJsonQuery(key)) {
           return `${this.jsonLength(key)} = ${this.escape(value)}`
@@ -59,6 +63,15 @@ export class PostgresBuilder extends Builder {
       $regex: ([key, value, flags]) => `(${this.parseEval(key)} ${
         (flags?.includes('i') || (value instanceof RegExp && value.flags.includes('i'))) ? '~*' : '~'
       } ${this.parseEval(value)})`,
+      $startsWith: ([key, prefix]) => {
+        const k = this.parseEval(key)
+        if (typeof prefix === 'string') {
+          const escaped = String(prefix).replace(/[!%_]/g, '!$&')
+          return `${k} LIKE ${this.escape(escaped + '%')} ESCAPE '!'`
+        }
+        const p = this.parseEval(prefix)
+        return `${k} LIKE concat(replace(replace(replace(${p}, '!', '!!'), '%', '!%'), '_', '!_'), '%') ESCAPE '!'`
+      },
 
       // number
       $add: (args) => `(${args.map(arg => this.parseEval(arg, 'double precision')).join(' + ')})`,

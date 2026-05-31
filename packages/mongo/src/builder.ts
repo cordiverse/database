@@ -168,6 +168,16 @@ export class Builder {
         },
       }),
 
+      $startsWith: ([str, prefix], group) => {
+        const input = this.eval(str, group)
+        if (typeof prefix === 'string') {
+          const escaped = '^' + String(prefix).replace(/[\\^$.*+?()[\]{}|]/g, '\\$&')
+          return { $regexMatch: { input, regex: { $literal: escaped } } }
+        }
+        const p = this.eval(prefix, group)
+        return { $eq: [{ $substrCP: [input, 0, { $strLenCP: p }] }, p] }
+      },
+
       $length: (arg, group) => ({ $size: this.eval(arg, group) }),
       $nin: (arg, group) => ({ $not: { $in: arg.map(val => this.eval(val, group)) } }),
 
@@ -315,6 +325,8 @@ export class Builder {
             },
           },
         })
+      } else if (prop === '$startsWith') {
+        return { $regex: '^' + String(query[prop]).replace(/[\\^$.*+?()[\]{}|]/g, '\\$&') }
       } else if (prop === '$exists') {
         if (query[prop]) return { $ne: null }
         else return null
