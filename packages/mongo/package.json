@@ -1,6 +1,6 @@
 {
   "name": "@cordisjs/plugin-database-mongo",
-  "version": "4.0.2",
+  "version": "4.1.0",
   "description": "MongoDB Driver for Minato",
   "type": "module",
   "main": "lib/index.js",
@@ -27,12 +27,12 @@
     "mongodb"
   ],
   "peerDependencies": {
-    "@cordisjs/plugin-database": "^4.0.2",
+    "@cordisjs/plugin-database": "^4.1.0",
     "cordis": "^4.0.0-rc.6"
   },
   "devDependencies": {
-    "@cordisjs/database-tests": "^3.0.1",
-    "@cordisjs/plugin-database": "^4.0.2",
+    "@cordisjs/database-tests": "^3.1.0",
+    "@cordisjs/plugin-database": "^4.1.0",
     "@cordisjs/plugin-logger-console": "^1.0.0",
     "cordis": "^4.0.0-rc.6"
   },

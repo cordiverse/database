@@ -1,6 +1,6 @@
 {
   "name": "@cordisjs/plugin-database",
-  "version": "4.0.2",
+  "version": "4.1.0",
   "description": "Type Driven Database Framework",
   "type": "module",
   "main": "lib/index.js",
