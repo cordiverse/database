@@ -32,7 +32,6 @@ export class PostgresBuilder extends Builder {
 
     this.queryOperators = {
       ...this.queryOperators,
-      $regex: (key, value) => this.createRegExpQuery(key, value),
       $regexFor: (key, value) => typeof value === 'string' ? `${this.escape(value)} ~ ${key}`
         : `${this.escape(value.input)} ${value.flags?.includes('i') ? '~*' : '~'} ${key}`,
       $startsWith: (key, value) => {
@@ -236,9 +235,9 @@ export class PostgresBuilder extends Builder {
     if (Array.isArray(value)) {
       if (!value.length) return notStr ? this.$true : this.$false
       if (Array.isArray(value[0])) {
-        return `(${key})${notStr} in (${value.map((val: any[]) => `(${val.map(x => this.escape(x)).join(', ')})`).join(', ')})`
+        return `(${key})${notStr} in (${value.map((val: any[]) => `(${val.map(x => this.escape(x, this.state.fieldType)).join(', ')})`).join(', ')})`
       }
-      return `${key}${notStr} in (${value.map(val => this.escape(val)).join(', ')})`
+      return `${key}${notStr} in (${value.map(val => isEvalExpr(val) ? this.parseEval(val, false) : this.escape(val, this.state.fieldType)).join(', ')})`
     } else if (value.$exec) {
       return `(${key})${notStr} in ${this.parseSelection(value.$exec, true)}`
     } else if (Type.fromTerm(value)?.type === 'list') {

@@ -47,9 +47,6 @@ export class SQLiteBuilder extends Builder {
       return this.asEncoded(`ifnull(${res}, 0)`, false)
     }
 
-    this.evalOperators.$in = ([key, value]) => this.asEncoded(this.createMemberEval(key, value, ''), false)
-    this.evalOperators.$nin = ([key, value]) => this.asEncoded(this.createMemberEval(key, value, ' NOT'), false)
-
     const binaryXor = (left: string, right: string) => `((${left} & ~${right}) | (~${left} & ${right}))`
     this.evalOperators.$xor = (args) => {
       const type = Type.fromTerm(this.state.expr, Type.Boolean)
@@ -71,6 +68,13 @@ export class SQLiteBuilder extends Builder {
       encode: value => `hex(${value})`,
       decode: value => `unhex(${value})`,
       load: value => isNullable(value) || typeof value === 'object' ? value : Binary.fromHex(value),
+      dump: value => isNullable(value) || typeof value === 'string' ? value : Binary.toHex(value),
+    }
+
+    this.transformers['uuid'] = {
+      encode: value => `hex(${value})`,
+      decode: value => `unhex(${value})`,
+      load: value => isNullable(value) || typeof value === 'object' ? value : !value ? null : Binary.fromHex(value),
       dump: value => isNullable(value) || typeof value === 'string' ? value : Binary.toHex(value),
     }
   }

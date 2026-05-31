@@ -139,6 +139,7 @@ export namespace Eval {
     number: Unary<any, number>
 
     // aggregation / json
+    first: Aggr<any>
     sum: Aggr<number>
     avg: Aggr<number>
     max: Aggr<Comparable>
@@ -292,6 +293,9 @@ const unwrapAggr = (expr: any, def?: Type) => {
 }
 
 // aggregation
+Eval.first = unary('first', (expr, table) => Array.isArray(table)
+  ? table.map(data => executeAggr(expr, data))[0]
+  : Array.from(executeEval(table, expr))[0], (expr) => unwrapAggr(expr))
 Eval.sum = unary('sum', (expr, table) => Array.isArray(table)
   ? table.reduce<number>((prev, curr) => prev + executeAggr(expr, curr), 0)
   : Array.from<number>(executeEval(table, expr)).reduce((prev, curr) => prev + curr, 0), Type.Number)

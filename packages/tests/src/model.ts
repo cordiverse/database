@@ -43,6 +43,7 @@ interface DType {
   bnum?: number
   bnum2?: number
   text2?: string
+  uuid?: string
 }
 
 interface DObject {
@@ -253,6 +254,10 @@ function ModelOperations(database: Database) {
         initial: 0,
       },
       text2: 'string2',
+      uuid: {
+        type: 'uuid',
+        initial: '00000000-0000-0000-0000-000000000000',
+      },
     }
 
     const baseObject = {
@@ -285,6 +290,7 @@ function ModelOperations(database: Database) {
 
 namespace ModelOperations {
   const magicBorn = new Date('1970/08/17')
+  const u1 = '550e8400-e29b-41d4-a716-446655440000'
 
   const dtypeTable: DType[] = [
     { id: 1, bool: false },
@@ -300,12 +306,12 @@ namespace ModelOperations {
     { id: 11, bigint: BigInt(1e63) },
     { id: 12, decimal: 2.432, int64: 9223372036854775806n },
     { id: 13, bnum: 114514, bnum2: 12345 },
-    { id: 14, object: { embed: { custom: { a: 'abc', b: 123 } } } },
+    { id: 14, object: { embed: { custom: { a: 'abc', b: 123 } } }, uuid: u1 },
   ]
 
   const dobjectTable: DObject[] = [
     { id: 1 },
-    { id: 2, foo: { nested: { id: 1, int64: 123n, list: ['1', '1', '4'], array: [1, 1, 4], object: { num: 10, text: 'ab', embed: { bool: false, bigint: BigInt(1e163), custom: { a: '?', b: 8 }, bstr: 'wo' } }, bigint: BigInt(1e63), bnum: 114514, bnum2: 12345 } } },
+    { id: 2, foo: { nested: { id: 1, int64: 123n, list: ['1', '1', '4'], array: [1, 1, 4], object: { num: 10, text: 'ab', embed: { bool: false, bigint: BigInt(1e163), custom: { a: '?', b: 8 }, bstr: 'wo' } }, bigint: BigInt(1e63), bnum: 114514, bnum2: 12345, uuid: u1 } } },
     { id: 3, bar: { nested: { id: 1, list: ['1', '1', '4'], array: [1, 1, 4], object: { num: 10, text: 'ab', embed: { bool: false, bigint: BigInt(1e163), custom: { a: '?', b: 8 }, bstr: 'wo' } }, bigint: BigInt(1e63), bnum: 114514, bnum2: 12345 } } },
     { id: 4, baz: [{ nested: { id: 1, list: ['1', '1', '4'], array: [1, 1, 4], object: { num: 10, text: 'ab', embed: { bool: false, bigint: BigInt(1e163), custom: { a: '?', b: 8 }, bstr: 'wo' } }, bigint: BigInt(1e63), bnum: 114514, bnum2: 12345 } }, { nested: { id: 2 } }] },
     { id: 5, foo: { nested: { id: 1, list: ['1', '1', '4'], array: [1, 1, 4], object2: { num: 10, text: 'ab', embed: { bool: false, bigint: BigInt(1e163) } }, bigint: BigInt(1e63), bnum: 114514, bnum2: 12345 } } },
@@ -536,6 +542,67 @@ namespace ModelOperations {
       await expect(database.eval('dtypes', row => $.array(row.text2))).to.eventually.contain('foo')
       await expect(database.get('dtypes', row => $.eq(row.text2, $.literal('foo', 'string2')))).to.eventually.have.length(1)
     })
+
+    it('setOne plain value', async () => {
+      const table = await setup(database, 'dtypes', dtypeTable)
+      table[0].text = 'updated'
+      const result = await database.setOne('dtypes', { id: 1 }, { text: 'updated' })
+      expect(result).to.not.be.undefined
+      expect(result!.text).to.equal('updated')
+      expect(result!.id).to.equal(table[0].id)
+    })
+
+    it('setOne dot notation + custom types', async () => {
+      const table = await setup(database, 'dtypes', dtypeTable)
+      const result = await database.setOne('dtypes', { id: 4 }, { 'object.embed.bool': false, 'object.embed.bigint': 999n })
+      expect(result).to.not.be.undefined
+      expect(result!.object!.embed!.bool).to.equal(false)
+      expect(result!.object!.embed!.bigint).to.equal(999n)
+    })
+
+    it('setOne expression update', async () => {
+      const table = await setup(database, 'dtypes', dtypeTable)
+      const row = table.find(r => r.id === 3)!
+      row.num! += 1
+      row.object!.json!.num = (row.object!.json!.num ?? 0) + 100
+      await expect(database.setOne('dtypes', 3, row => ({
+        num: $.add(row.num, 1),
+        'object.json.num': $.add($.ifNull(row.object.json.num, 0), 100),
+      }))).to.eventually.have.shape(row)
+    })
+
+    it('setOne subquery update', async () => {
+      const table = await setup(database, 'dtypes', dtypeTable)
+      const row = table.find(r => r.id === 2)!
+      row.text = row.text ? row.text : ''
+      await expect(database.setOne('dtypes', 2, row => ({
+        text: database.select('dtypes', r => $.eq(r.id, 1)).evaluate(r => $.max(r.text)),
+      }))).to.eventually.have.property('text')
+    })
+
+    it('setOne bigint + binary + bnum custom type', async () => {
+      const table = await setup(database, 'dtypes', dtypeTable)
+      table[10].bigint = 888n
+      table[10].bnum = 999
+      table[10].binary = toBinary('world')
+      await expect(database.setOne('dtypes', 11, {
+        bigint: 888n,
+        bnum: 999,
+        binary: toBinary('world'),
+      })).to.eventually.have.shape(table[10])
+    })
+
+    it('setOne no match returns undefined', async () => {
+      await setup(database, 'dtypes', dtypeTable)
+      await expect(database.setOne('dtypes', 99999, { text: 'nope' })).to.eventually.be.undefined
+    })
+
+    it('setOne preserves all field types', async () => {
+      const table = await setup(database, 'dtypes', dtypeTable)
+      const row = table.find(r => r.id === 5)!
+      row.text = 'all-types-ok'
+      await expect(database.setOne('dtypes', { id: 5 }, { text: 'all-types-ok' })).to.eventually.have.shape(row)
+    })
   }
 
   export const object = function ObjectFields(database: Database, options: ModelOptions = {}) {
@@ -666,6 +733,47 @@ namespace ModelOperations {
       await setup(database, 'dobjects', dobjectTable)
       await expect(database.get('dobjects', row => $.eq(row.baz[0].nested.id, 1))).to.eventually.have.length(2)
       await expect(database.get('dobjects', row => $.eq(row.baz[0].nested.array[0], 1))).to.eventually.have.length(2)
+    })
+
+    it('setOne nested dot notation', async () => {
+      const table = await setup(database, 'dobjects', dobjectTable)
+      table[1].foo!.nested!.timestamp = new Date('2009/10/01 15:40:00')
+      table[1].foo!.nested!.binary = toBinary('boom')
+      await expect(database.setOne('dobjects', 2, {
+        'foo.nested.timestamp': new Date('2009/10/01 15:40:00'),
+        'foo.nested.binary': toBinary('boom'),
+      })).to.eventually.have.shape(table[1])
+    })
+
+    it('setOne nested object replace', async () => {
+      const table = await setup(database, 'dobjects', dobjectTable)
+      table[0].foo = { nested: { id: 1 } }
+      await expect(database.setOne('dobjects', 1, {
+        'foo.nested': { id: 1 },
+      })).to.eventually.have.nested.property('foo.nested.id', 1)
+    })
+
+    it('setOne expression on nested field', async () => {
+      const table = await setup(database, 'dobjects', dobjectTable)
+      const row = table.find(r => r.bar?.nested?.id !== undefined)!
+      row.bar!.nested!.text = 'expr-updated'
+      const result = await database.setOne('dobjects', row.id, {
+        'bar.nested.text': $.concat(row.bar!.nested!.text ?? '', ''),
+      })
+      expect(result).to.not.be.undefined
+      expect(result!.bar!.nested!.text).to.equal(row.bar!.nested!.text)
+    })
+
+    it('setOne recursive type', async () => {
+      const table = await setup(database, 'recurxs', [{ id: 1, y: { id: 2, x: { id: 3, y: { id: 4, x: { id: 5 } } } } }])
+      const row = table[0]
+      row.y!.id = 999
+      await expect(database.setOne('recurxs', 1, { y: { id: 999, x: { id: 3, y: { id: 4, x: { id: 5 } } } } })).to.eventually.have.shape(row)
+    })
+
+    nullableComparator && it('decode uuid', async () => {
+      await setup(database, 'dobjects', dobjectTable)
+      await expect(database.get('dobjects', row => $.eq(row.foo!.nested!.uuid!, $.literal(u1, 'uuid')))).to.eventually.have.length(1)
     })
   }
 }

@@ -1,6 +1,9 @@
-import { BSONType, ClientSession, Collection, Db, IndexDescription, Long, MongoClient, MongoClientOptions, MongoError, ObjectId } from 'mongodb'
+import {
+  BSONType, ClientSession, Collection, Db, IndexDescription, Long, Binary as MongoBinary,
+  MongoClient, MongoClientOptions, MongoError, ObjectId,
+} from 'mongodb'
 import { Binary, deepEqual, Dict, isNullable, makeArray, mapValues, noop, omit, pick, remove } from 'cosmokit'
-import { Driver, Eval, executeUpdate, Field, hasSubquery, Query, RuntimeError, Selection } from '@cordisjs/plugin-database'
+import { bufferToUuid, Driver, Eval, executeUpdate, Field, hasSubquery, Query, RuntimeError, Selection, uuidToBuffer } from '@cordisjs/plugin-database'
 import { Builder } from './builder'
 import zhCN from './locales/zh-CN.yml'
 import enUS from './locales/en-US.yml'
@@ -73,6 +76,12 @@ export class MongoDriver extends Driver<MongoDriver.Config> {
       types: ['binary'],
       dump: value => isNullable(value) ? value : Buffer.from(value),
       load: value => isNullable(value) ? value : Binary.fromSource(value.buffer),
+    })
+
+    this.define<string, MongoBinary>({
+      types: ['uuid'],
+      dump: value => isNullable(value) ? value as any : new MongoBinary(Buffer.from(uuidToBuffer(value)), MongoBinary.SUBTYPE_UUID),
+      load: value => isNullable(value) || typeof value === 'string' ? value as any : bufferToUuid(value.buffer),
     })
 
     this.define<bigint, number | Long>({
@@ -386,6 +395,36 @@ export class MongoDriver extends Driver<MongoDriver.Config> {
       ], { session: this.session })
       return { matched: result.matchedCount, modified: result.modifiedCount }
     }
+  }
+
+  async setOne(sel: Selection.Mutable, update: {}) {
+    const { query, table, model } = sel
+    if (hasSubquery(sel.query) || Object.values(update).some(x => hasSubquery(x))) {
+      await this.set(sel, update)
+      const rows = await this.get(sel)
+      return rows[0]
+    }
+
+    const filter = this.transformQuery(sel, query, table)
+    if (!filter) return
+    const coll = this.db.collection(table)
+
+    const virtualKey = this.getVirtualKey(table)
+    const transformer = new Builder(this, Object.keys(sel.tables), virtualKey, '$' + tempKey + '.')
+    const $set = this.mapVirtualUpdate(update, virtualKey, (item, key) => transformer.toUpdateExpr(item, model.getType(key)))
+    const $unset = Object.entries($set)
+      .filter(([_, value]) => typeof value === 'object')
+      .map(([key, _]) => key)
+    const preset = Object.fromEntries(transformer.walkedKeys.map(key => [tempKey + '.' + key, '$' + key]))
+
+    const result = await coll.findOneAndUpdate(filter, [
+      ...transformer.walkedKeys.length ? [{ $set: preset }] : [],
+      ...$unset.length ? [{ $unset }] : [],
+      { $set },
+      ...transformer.walkedKeys.length ? [{ $unset: [tempKey] }] : [],
+    ], { returnDocument: 'after', session: this.session })
+    if (!result) return
+    return this.builder.load(this.patchVirtual(table, result), model)
   }
 
   async remove(sel: Selection.Mutable) {

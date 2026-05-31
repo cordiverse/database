@@ -27,7 +27,7 @@ export interface Modifier {
 }
 
 namespace Executable {
-  export type Action = 'get' | 'set' | 'remove' | 'create' | 'upsert' | 'eval'
+  export type Action = 'get' | 'set' | 'remove' | 'create' | 'upsert' | 'eval' | 'setOne'
 
   export interface Payload {
     type: Action

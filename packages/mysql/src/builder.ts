@@ -1,11 +1,12 @@
 import { Builder, escapeId, isBracketed } from '@cordisjs/sql-utils'
 import { Binary, Dict, isNullable, Time } from 'cosmokit'
-import { Driver, Field, isAggrExpr, isEvalExpr, Model, randomId, Selection, Type } from '@cordisjs/plugin-database'
+import { bufferToUuid, Driver, Field, isAggrExpr, isEvalExpr, Model, randomId, RegExpLike, Selection, Type, uuidToBuffer } from '@cordisjs/plugin-database'
 
 export interface Compat {
   maria?: boolean
-  maria105?: boolean
   mysql57?: boolean
+  ci?: boolean
+  uuid?: boolean
   timezone?: string
 }
 
@@ -46,6 +47,21 @@ export class MySQLBuilder extends Builder {
       }
       const p = this.parseEval(prefix)
       return `${k} LIKE BINARY concat(replace(replace(replace(${p}, '!', '!!'), '%', '!%'), '_', '!_'), '%') ESCAPE '!'`
+    }
+
+    if (this.compat.mysql57 || this.compat.maria) {
+      this.queryOperators.$regexFor = (key, value) => typeof value === 'string' ? `${this.escape(value)} ${this.compat.ci
+        ? 'collate utf8mb4_bin' : ''} regexp ${key}` : `${this.escape(value.input)} ${(!!value.flags?.includes('i') === !!this.compat.ci)
+        ? '' : this.compat.ci ? 'collate utf8mb4_bin' : 'collate utf8mb4_general_ci'} regexp ${key}`
+      this.evalOperators.$regex = ([key, value, flags]) => `(${this.parseEval(key)} ${
+        ((!!flags?.includes('i') || (value instanceof RegExp && value.flags.includes('i'))) === !!this.compat.ci)
+          ? '' : this.compat.ci ? 'collate utf8mb4_bin' : 'collate utf8mb4_general_ci'
+      } regexp ${this.parseEval(value)})`
+    } else {
+      this.queryOperators.$regexFor = (key, value) => typeof value === 'string' ? `regexp_like(${this.escape(value)}, ${key}, 'c')`
+        : `regexp_like(${this.escape(value.input)}, ${key}, ${value.flags?.includes('i') ? `'i'` : `'c'`})`
+      this.evalOperators.$regex = ([key, value, flags]) => `regexp_like(${this.parseEval(key)}, ${this.parseEval(value)}, ${
+        (flags?.includes('i') || (value instanceof RegExp && value.flags.includes('i'))) ? `'i'` : `'c'`})`
     }
 
     this.evalOperators.$select = (args) => {
@@ -93,7 +109,7 @@ export class MySQLBuilder extends Builder {
     this.transformers['boolean'] = {
       encode: value => `if(${value}=true, 1, 0)`,
       decode: value => `if(${value}=1, true, false)`,
-      load: value => isNullable(value) ? value : !!value,
+      load: value => isNullable(value) ? value : !!+value,
       dump: value => isNullable(value) ? value : value ? 1 : 0,
     }
 
@@ -109,6 +125,18 @@ export class MySQLBuilder extends Builder {
       decode: value => `from_base64(${value})`,
       load: value => isNullable(value) || typeof value === 'object' ? value : Binary.fromBase64(value),
       dump: value => isNullable(value) || typeof value === 'string' ? value : Binary.toBase64(value),
+    }
+
+    if (!compat.uuid) {
+      // MySQL 8.0 has bin_to_uuid / uuid_to_bin built-in;
+      // MySQL 5.7 & MariaDB <10.7 get polyfills via _setupCompatFunctions.
+      // MariaDB 10.7+ uses the native UUID type in JSON, no wrapping needed.
+      this.transformers['uuid'] = {
+        encode: value => `bin_to_uuid(${value})`,
+        decode: value => `uuid_to_bin(${value})`,
+        load: value => isNullable(value) || typeof value === 'object' ? value : Buffer.from(uuidToBuffer(value)),
+        dump: value => isNullable(value) || typeof value === 'string' ? value : bufferToUuid(value),
+      }
     }
 
     this.transformers['date'] = {
@@ -142,6 +170,22 @@ export class MySQLBuilder extends Builder {
         return new Date(value)
       },
       dump: value => isNullable(value) ? value : Time.template('yyyy-MM-dd hh:mm:ss.SSS', value),
+    }
+  }
+
+  protected createRegExpQuery(key: string, value: string | RegExpLike) {
+    if (this.compat.mysql57) {
+      if (typeof value !== 'string' && value.flags?.includes('i')) {
+        return `${key} ${this.compat.ci ? '' : 'collate utf8mb4_general_ci'} regexp ${this.escape(value.source)}`
+      } else {
+        return `${key} ${this.compat.ci ? 'collate utf8mb4_bin' : ''} regexp ${this.escape(typeof value === 'string' ? value : value.source)}`
+      }
+    } else {
+      if (typeof value !== 'string' && value.flags?.includes('i')) {
+        return `${key} regexp ${this.escape('(?i)' + value.source)}`
+      } else {
+        return `${key} regexp ${this.escape('(?-i)' + (typeof value === 'string' ? value : value.source))}`
+      }
     }
   }
 

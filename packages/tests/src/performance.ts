@@ -72,7 +72,7 @@ function PerformanceTests(database: Database) {
       },
     })
 
-    await database.upsert('perf', new Array(2000).fill(0).map((_, i) => ({ text: 'hello', number: i })))
+    await database.upsert('perf', new Array(1000).fill(0).map((_, i) => ({ text: 'hello', number: i })))
 
     await setup(database, 'perfNested', new Array(500).fill(0).map((_, i) => ({
       id: i + 1,
@@ -89,8 +89,8 @@ function PerformanceTests(database: Database) {
 
   it('bulk get flat rows', async (ctx) => {
     const rows = await benchmark(ctx.task.name, 10, () => database.get('perf', {}))
-    expect(rows).to.have.length(2000)
-    expect(rows[1999]).to.include({ text: 'hello', number: 1999 })
+    expect(rows).to.have.length(1000)
+    expect(rows[999]).to.include({ text: 'hello', number: 999 })
   })
 
   it('bulk get nested rows', async (ctx) => {

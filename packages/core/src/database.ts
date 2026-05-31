@@ -204,6 +204,9 @@ export class Database extends Service {
     model.unique = model.unique.map(keys => typeof keys === 'string' ? model.fields[keys]!.relation?.fields || keys
       : keys.map(key => model.fields[key]!.relation?.fields || key).flat())
 
+    // refresh the type cache to pick up relation foreign key columns added above
+    defineProperty(model, 'type', Type.Object(mapValues(model.fields, field => Type.fromField(field!))) as any)
+
     this.prepareTasks[name] = this.prepare(name)
     ;(this.ctx as Context).emit('database/model', name)
   }
@@ -508,6 +511,23 @@ export class Database extends Service {
     update = sel.model.format(update)
     if (Object.keys(update).length === 0) return {}
     return sel._action('set', update).execute()
+  }
+
+  async setOne<K extends Keys<Tables>>(
+    table: K,
+    query: Query<Tables[K]>,
+    update: Row.Computed<Tables[K], Update<Tables[K]>>,
+  ): Promise<Tables[K] | undefined> {
+    const sel = this.select(table, query, null)
+    if (typeof update === 'function') update = update(sel.row)
+    const primary = makeArray(sel.model.primary)
+    if (primary.some(key => key in update)) {
+      throw new TypeError(`cannot modify primary key`)
+    }
+
+    update = sel.model.format(update)
+    if (Object.keys(update).length === 0) return (await this.get(table, query))[0]
+    return sel._action('setOne', update).execute()
   }
 
   async remove<K extends Keys<Tables>>(table: K, query: Query<Tables[K]>): Promise<Driver.WriteResult> {

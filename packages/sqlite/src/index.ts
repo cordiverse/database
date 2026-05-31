@@ -1,5 +1,5 @@
-import { Binary, deepEqual, Dict, difference, isNullable, makeArray, mapValues } from 'cosmokit'
-import { Driver, Eval, executeUpdate, Field, getCell, hasSubquery, isEvalExpr, Selection } from '@cordisjs/plugin-database'
+import { Binary, deepEqual, Dict, difference, isNullable, makeArray, mapValues, pick } from 'cosmokit'
+import { bufferToUuid, Driver, Eval, executeUpdate, Field, getCell, hasSubquery, isEvalExpr, Selection, uuidToBuffer } from '@cordisjs/plugin-database'
 import { escapeId } from '@cordisjs/sql-utils'
 import type { DatabaseSync, StatementSync } from 'node:sqlite'
 import enUS from './locales/en-US.yml'
@@ -29,6 +29,7 @@ function getTypeDef({ deftype: type }: Field) {
     case 'list':
     case 'json': return `TEXT`
     case 'binary': return `BLOB`
+    case 'uuid': return `BLOB`
     default: throw new Error(`unsupported type: ${type}`)
   }
 }
@@ -205,6 +206,12 @@ export class SQLiteDriver extends Driver<SQLiteDriver.Config> {
       load: value => isNullable(value) ? value : Binary.fromSource(value),
     })
 
+    this.define<string, any>({
+      types: ['uuid'],
+      dump: value => isNullable(value) ? value : uuidToBuffer(value),
+      load: value => isNullable(value) || typeof value === 'string' ? value : bufferToUuid(value),
+    })
+
     this.define<number, number | bigint>({
       types: ['primary', ...Field.number as any],
       dump: value => value,
@@ -346,6 +353,41 @@ export class SQLiteDriver extends Driver<SQLiteDriver.Config> {
         this._update(sel, primaryFields, updateFields, update, row)
       }
       return { matched: data.length }
+    }
+  }
+
+  async setOne(sel: Selection.Mutable, data: {}) {
+    const { model, table, query } = sel
+    const { primary } = model, fields = model.availableFields()
+    const updateFields = [...new Set(Object.keys(data).map((key) => {
+      return Object.keys(fields).find(field => field === key || key.startsWith(field + '.'))!
+    }))]
+    const primaryFields = makeArray(primary)
+
+    if (query.$expr || hasSubquery(sel.query) || Object.values(data).some(x => hasSubquery(x))) {
+      const sel2 = this.database.select(table as never, query)
+      sel2.tables[sel.ref] = sel2.tables[sel2.ref]
+      delete sel2.tables[sel2.ref]
+      sel2.ref = sel.ref
+      const project = mapValues(data as any, (value, key) => () => (isEvalExpr(value) ? value : Eval.literal(value, model.getType(key))))
+      const rawUpsert = await sel2.project({
+        ...project,
+        ...Object.fromEntries(primaryFields.map(x => [x, () => Eval('', [sel.ref, x], sel2.model.getType(x)!)])),
+      }).limit(1).execute()
+      if (!rawUpsert.length) return
+      const row = rawUpsert[0]
+      const upsert = [{
+        ...mapValues(data, (_, key) => getCell(row, key)),
+        ...Object.fromEntries(primaryFields.map(x => [x, getCell(row, x)])),
+      }]
+      await this.database.upsert(table as never, upsert)
+      return (await this.database.get(table as never, pick(upsert[0], primaryFields as any) as any))[0]
+    } else {
+      const existing = await this.database.get(table as never, query)
+      const row = existing[0]
+      if (!row) return
+      this._update(sel, primaryFields, updateFields, data, row)
+      return (await this.database.get(table as never, pick(row, primaryFields as any) as any))[0]
     }
   }
 

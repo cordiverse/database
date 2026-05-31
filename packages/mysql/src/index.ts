@@ -1,7 +1,7 @@
 import { Binary, Dict, difference, isNullable, makeArray, pick } from 'cosmokit'
 import { createPool, format } from '@vlasky/mysql'
 import type { OkPacket, Pool, PoolConfig, PoolConnection } from 'mysql'
-import { Driver, Eval, executeUpdate, Field, RuntimeError, Selection } from '@cordisjs/plugin-database'
+import { bufferToUuid, Driver, Eval, executeUpdate, Field, RuntimeError, Selection, uuidToBuffer } from '@cordisjs/plugin-database'
 import { escapeId, isBracketed } from '@cordisjs/sql-utils'
 import { Compat, MySQLBuilder } from './builder'
 import zhCN from './locales/zh-CN.yml'
@@ -49,7 +49,7 @@ export class MySQLDriver extends Driver<MySQLDriver.Config> {
   static name = 'mysql'
 
   public pool!: Pool
-  public sql: MySQLBuilder = new MySQLBuilder(this)
+  public sql!: MySQLBuilder
 
   private session?: PoolConnection
   private _compat: Compat = {}
@@ -76,12 +76,21 @@ export class MySQLDriver extends Driver<MySQLDriver.Config> {
     const [version, timezone] = Object.values((await this.query(`SELECT version(), @@GLOBAL.time_zone`))[0]) as string[]
     // https://jira.mariadb.org/browse/MDEV-30623
     this._compat.maria = version.includes('MariaDB')
-    // https://jira.mariadb.org/browse/MDEV-26506
-    this._compat.maria105 = !!version.match(/10.5.\d+-MariaDB/)
     // For json_table
     this._compat.mysql57 = !!version.match(/5.7.\d+/)
+    // MariaDB 10.7+ has the native UUID data type
+    // (MariaDB has no BIN_TO_UUID/UUID_TO_BIN; see MDEV-15854)
+    const mariaVer = version.match(/(\d+)\.(\d+)\.\d+-MariaDB/)
+    if (mariaVer) {
+      const major = +mariaVer[1]
+      const minor = +mariaVer[2]
+      this._compat.uuid = major > 10 || (major === 10 && minor >= 7)
+    }
 
+    this._compat.ci = this.config.charset?.toLowerCase().endsWith('ci')
     this._compat.timezone = timezone
+
+    this.sql = new MySQLBuilder(this, undefined, this._compat)
 
     if (this._compat.mysql57 || this._compat.maria) {
       await this._setupCompatFunctions()
@@ -117,6 +126,24 @@ export class MySQLDriver extends Driver<MySQLDriver.Config> {
       dump: value => value,
       load: value => isNullable(value) ? value : Binary.fromSource(value),
     })
+
+    if (this._compat.uuid) {
+      // MariaDB native UUID — strings round-trip directly.
+      this.define<string, any>({
+        types: ['uuid'],
+        dump: value => value,
+        load: value => isNullable(value) || typeof value === 'string' ? value : bufferToUuid(value),
+      })
+    } else {
+      // BINARY(16) storage — JS handles the string ↔ Buffer conversion.
+      // MySQL 8.0 has bin_to_uuid/uuid_to_bin as built-ins; legacy versions
+      // get polyfilled equivalents via _setupCompatFunctions.
+      this.define<string, any>({
+        types: ['uuid'],
+        dump: value => isNullable(value) ? value : Buffer.from(uuidToBuffer(value)),
+        load: value => isNullable(value) || typeof value === 'string' ? value : bufferToUuid(value),
+      })
+    }
 
     this.define<number, number>({
       types: Field.number as any,
@@ -289,6 +316,14 @@ INSERT INTO mtt VALUES(json_extract(j, concat('$[', i, ']'))); SET i=i+1; END WH
       await this.query(`CREATE FUNCTION minato_cfunc_max (j JSON) RETURNS DOUBLE DETERMINISTIC BEGIN DECLARE n int; DECLARE i int; DECLARE r DOUBLE;
 DROP TEMPORARY TABLE IF EXISTS mtt; CREATE TEMPORARY TABLE mtt (value JSON); SELECT json_length(j) into n; set i = 0; WHILE i<n DO
 INSERT INTO mtt VALUES(json_extract(j, concat('$[', i, ']'))); SET i=i+1; END WHILE; SELECT max(value) INTO r FROM mtt; RETURN r; END`)
+      // Polyfill MySQL 8.0's BIN_TO_UUID / UUID_TO_BIN (single-arg form).
+      // MariaDB never implemented these (MDEV-15854); MySQL 5.7 predates them.
+      await this.query(`DROP FUNCTION IF EXISTS bin_to_uuid`)
+      await this.query(`CREATE FUNCTION bin_to_uuid (b BINARY(16)) RETURNS CHAR(36) DETERMINISTIC
+RETURN LOWER(CONCAT_WS('-', SUBSTR(HEX(b), 1, 8), SUBSTR(HEX(b), 9, 4), SUBSTR(HEX(b), 13, 4), SUBSTR(HEX(b), 17, 4), SUBSTR(HEX(b), 21, 12)))`)
+      await this.query(`DROP FUNCTION IF EXISTS uuid_to_bin`)
+      await this.query(`CREATE FUNCTION uuid_to_bin (u CHAR(36)) RETURNS BINARY(16) DETERMINISTIC
+RETURN UNHEX(REPLACE(u, '-', ''))`)
     } catch (e) {
       this.ctx.logger?.warn(`Failed to setup compact functions: ${e}`)
     }
@@ -414,6 +449,56 @@ INSERT INTO mtt VALUES(json_extract(j, concat('$[', i, ']'))); SET i=i+1; END WH
     const sql = [...builder.prequeries, `UPDATE ${escapeId(table)} ${ref} SET ${update} WHERE ${filter}`].join('; ')
     const result = await this.query(sql)
     return { matched: result.affectedRows, modified: result.changedRows }
+  }
+
+  async setOne(sel: Selection.Mutable, data: {}) {
+    const { model, query, table, tables, ref } = sel
+    const builder = new MySQLBuilder(this, tables, this._compat)
+    const filter = builder.parseQuery(query)
+    const fields = model.availableFields()
+    if (filter === '0') return
+    const updateFields = [...new Set(Object.keys(data).map((key) => {
+      return Object.keys(fields).find(field => field === key || key.startsWith(field + '.'))!
+    }))]
+
+    const allFields = Object.keys(fields)
+    const varname = (f: string) => `@_${f.replace(/\./g, '_')}`
+
+    const setClauses = allFields.filter(f => f in fields).map((field) => {
+      if (updateFields.includes(field)) {
+        return `${escapeId(field)} = (${varname(field)} := ${builder.toUpdateExpr(data, field, fields[field], false)})`
+      } else {
+        return `${escapeId(field)} = (${varname(field)} := ${escapeId(field)})`
+      }
+    })
+
+    const selectExprs = allFields.map((field) => {
+      const alias = escapeId(field)
+      if (field in fields) {
+        return `${varname(field)} AS ${alias}`
+      }
+      const parent = Object.keys(fields).find(k => field.startsWith(k + '.'))
+      if (parent) {
+        const rest = field.slice(parent.length + 1)
+        return `json_extract(${varname(parent)}, '$.${rest.split('.').map((k: string) => `"${k}"`).join('.')}') AS ${alias}`
+      }
+      return `${varname(field)} AS ${alias}`
+    }).join(', ')
+
+    const sql = [
+      ...builder.prequeries,
+      `UPDATE ${escapeId(table)} ${ref} SET ${setClauses.join(', ')} WHERE ${filter} LIMIT 1`,
+      `SELECT ${selectExprs}`,
+    ].join('; ')
+    const results = await this.query(sql)
+    // UPDATE is always the last result with affectedRows (before SELECT)
+    const parts = Array.isArray(results[0]) || results[0]?.affectedRows !== undefined ? results : [results]
+    const updateResult = parts[parts.length === 1 ? 0 : parts.length - 2]
+    if (!updateResult || updateResult.affectedRows === 0) return
+    const selectResult = parts[parts.length - 1]
+    const row = Array.isArray(selectResult) ? selectResult[0] : selectResult
+    if (!row) return
+    return builder.load(row, model)
   }
 
   async remove(sel: Selection.Mutable) {
@@ -563,6 +648,11 @@ INSERT INTO mtt VALUES(json_extract(j, concat('$[', i, ']'))); SET i=i+1; END WH
       case 'string': return (length || 255) > 65536 ? 'longtext' : `varchar(${length || 255})`
       case 'text': return (length || 255) > 65536 ? 'longtext' : `text(${length || 65535})`
       case 'binary': return (length || 65537) > 65536 ? 'longblob' : `blob`
+      case 'uuid':
+        // MariaDB 10.7+ has a native UUID type; legacy versions (MySQL 5.7,
+        // MariaDB <10.7) get polyfilled bin_to_uuid / uuid_to_bin functions
+        // via _setupCompatFunctions, so BINARY(16) works universally.
+        return this._compat.uuid ? 'uuid' : 'binary(16)'
       case 'list': return `text(${length || 65535})`
       case 'json': return `text(${length || 65535})`
       default: throw new Error(`unsupported type: ${type}`)
@@ -600,6 +690,7 @@ export namespace MySQLDriver {
       user: z.string().default('root'),
       password: z.string().role('secret'),
       database: z.string().required(),
+      charset: z.string().default('utf8mb4_general_ci'),
     }),
     z.object({
       ssl: z.union([
