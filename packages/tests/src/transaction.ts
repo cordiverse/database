@@ -59,6 +59,38 @@ namespace TransactionOperations {
     return result
   }
 
+  export function basic(database: Database) {
+    it('returns callback result', async () => {
+      const result = await database.transact(async (database) => {
+        await database.get('temptx', {})
+        return 'done'
+      })
+      expect(result).to.equal('done')
+    })
+
+    it('propagates errors before database access', async () => {
+      await expect(database.transact(async () => {
+        throw new Error('transaction callback failed')
+      })).to.be.rejectedWith('transaction callback failed')
+    })
+
+    it('propagates transaction startup errors', async () => {
+      const driver = database.drivers[0]!
+      const original = driver.withTransaction
+      const error = new Error('transaction startup failed')
+      driver.withTransaction = async (_callback: (session?: any) => Promise<void>): Promise<void> => {
+        throw error
+      }
+      try {
+        await expect(database.transact(async (database) => {
+          await database.get('temptx', {})
+        })).to.be.rejectedWith('transaction startup failed')
+      } finally {
+        driver.withTransaction = original
+      }
+    })
+  }
+
   export function commit(database: Database) {
     it('create', async () => {
       const table = barTable.map(bar => merge(database.tables.temptx.create(), bar))

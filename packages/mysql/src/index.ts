@@ -586,10 +586,23 @@ RETURN UNHEX(REPLACE(u, '-', ''))`)
     return new Promise<void>((resolve, reject) => {
       this.pool.getConnection((err, conn) => {
         if (err) return reject(err)
-        conn.beginTransaction(() => callback(conn).then(
-          () => conn.commit(() => resolve()),
-          (e) => conn.rollback(() => reject(e)),
-        ).finally(() => conn.release()))
+        conn.beginTransaction((err) => {
+          if (err) {
+            conn.release()
+            return reject(err)
+          }
+          Promise.resolve().then(() => callback(conn)).then(
+            () => conn.commit((err) => {
+              conn.release()
+              if (err) reject(err)
+              else resolve()
+            }),
+            (error) => conn.rollback(() => {
+              conn.release()
+              reject(error)
+            }),
+          )
+        })
       })
     })
   }

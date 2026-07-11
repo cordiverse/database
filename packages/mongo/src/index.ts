@@ -62,10 +62,10 @@ export class MongoDriver extends Driver<MongoDriver.Config> {
     this.db = this.client.db(this.config.database)
 
     this.db.admin().serverInfo().then((doc) => this.version = +doc.version.split('.')[0]).catch(noop)
-    await this.client.withSession((session) => session.withTransaction(
-      () => this.db.collection('_fields').findOne({}, { session }),
-      { readPreference: 'primary' },
-    )).catch(() => {
+    this._replSet = true
+    await this.withTransaction(async (session) => {
+      await this.db.collection('_fields').findOne({}, { session })
+    }).catch(() => {
       this._replSet = false
       this.ctx.logger?.warn(`MongoDB is currently running as standalone server, transaction is disabled.
       Convert to replicaSet to enable the feature.
@@ -558,12 +558,23 @@ export class MongoDriver extends Driver<MongoDriver.Config> {
     }
   }
 
-  async withTransaction(callback: (session: any) => Promise<void>) {
-    if (this._replSet) {
-      await this.client.withSession((session) => session.withTransaction(() => callback(session), { readPreference: 'primary' }))
-    } else {
+  async withTransaction(callback: (session?: ClientSession) => Promise<void>) {
+    if (!this._replSet) {
       await callback(undefined)
+      return
     }
+    await this.client.withSession(async (session) => {
+      session.startTransaction({ readPreference: 'primary' })
+      try {
+        await callback(session)
+        await session.commitTransaction()
+      } catch (error) {
+        if (session.inTransaction()) {
+          await session.abortTransaction().catch(noop)
+        }
+        throw error
+      }
+    })
   }
 
   async getIndexes(table: string) {

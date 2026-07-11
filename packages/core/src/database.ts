@@ -1,4 +1,4 @@
-import { deduplicate, defineProperty, Dict, filterKeys, isNullable, makeArray, mapValues, MaybeArray, noop, omit, pick, remove } from 'cosmokit'
+import { deduplicate, defineProperty, Dict, filterKeys, isNullable, makeArray, mapValues, MaybeArray, omit, pick, remove } from 'cosmokit'
 import { Context, Service } from 'cordis'
 import { AtomicTypes, DeepPartial, FlatKeys, FlatPick, Flatten, getCell, Indexable, Keys, randomId, Row, unravel, Values } from './utils.ts'
 import { Selection } from './selection.ts'
@@ -591,7 +591,7 @@ export class Database extends Service {
     return database
   }
 
-  withTransaction(callback: (database: this) => Promise<void>) {
+  withTransaction<T>(callback: (database: this) => Promise<T>) {
     return this.transact(callback)
   }
 
@@ -600,8 +600,12 @@ export class Database extends Service {
     const finalTasks: Promise<void>[] = []
     const database = this.makeProxy(Database.transact, (driver) => {
       let initialized = false, session: any
-      let _resolve: (value: any) => void
-      const sessionTask = new Promise((resolve) => _resolve = resolve)
+      let _resolve: () => void, _reject: (reason?: any) => void
+      const sessionTask = new Promise<void>((resolve, reject) => {
+        _resolve = resolve
+        _reject = reject
+      })
+      sessionTask.catch(() => {})
       driver = new Proxy(driver, {
         get: (target, p, receiver) => {
           if (p === Database.transact) return target
@@ -611,17 +615,18 @@ export class Database extends Service {
           return Reflect.get(target, p, receiver)
         },
       })
-      finalTasks.push(driver.withTransaction((_session) => {
-        if (initialized) initialTask = initialTaskFactory()
+      const task = Promise.resolve().then(() => driver.withTransaction(async (_session) => {
         initialized = true
-        _resolve(session = _session)
-        return initialTask as any
+        session = _session
+        _resolve()
+        await initialTask
       }))
+      task.catch((error) => !initialized && _reject(error))
+      finalTasks.push(task)
       return driver
     })
-    const initialTaskFactory = () => Promise.resolve().then(() => callback(database))
-    let initialTask = initialTaskFactory()
-    return initialTask.catch(noop).finally(() => Promise.all(finalTasks))
+    const initialTask = Promise.resolve().then(() => callback(database))
+    return initialTask.finally(() => Promise.all(finalTasks))
   }
 
   async stopAll() {

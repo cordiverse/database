@@ -444,13 +444,18 @@ export class SQLiteDriver extends Driver<SQLiteDriver.Config> {
 
   async withTransaction(callback: () => Promise<void>) {
     if (this._transactionTask) await this._transactionTask.catch(() => {})
-    return this._transactionTask = new Promise<void>((resolve, reject) => {
+    return this._transactionTask = (async () => {
       this._run('BEGIN TRANSACTION')
-      callback().then(
-        () => resolve(this._run('COMMIT')),
-        (e) => (this._run('ROLLBACK'), reject(e)),
-      )
-    })
+      try {
+        await callback()
+        this._run('COMMIT')
+      } catch (error) {
+        try {
+          this._run('ROLLBACK')
+        } catch {}
+        throw error
+      }
+    })()
   }
 
   async getIndexes(table: string) {
