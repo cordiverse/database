@@ -1,6 +1,6 @@
 {
   "name": "@cordisjs/plugin-database-memory",
-  "version": "4.1.0",
+  "version": "4.1.1",
   "description": "In-memory Driver for Minato",
   "type": "module",
   "main": "lib/index.js",
@@ -26,13 +26,13 @@
     "memory"
   ],
   "peerDependencies": {
-    "@cordisjs/plugin-database": "^4.1.0",
-    "cordis": "^4.0.0-rc.6"
+    "@cordisjs/plugin-database": "^4.1.1",
+    "cordis": "^4.0.0-rc.7"
   },
   "devDependencies": {
-    "@cordisjs/database-tests": "^3.1.0",
-    "@cordisjs/plugin-database": "^4.1.0",
-    "cordis": "^4.0.0-rc.6"
+    "@cordisjs/database-tests": "^3.1.1",
+    "@cordisjs/plugin-database": "^4.1.1",
+    "cordis": "^4.0.0-rc.7"
   },
   "dependencies": {
     "cosmokit": "^1.8.1",
