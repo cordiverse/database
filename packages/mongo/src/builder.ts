@@ -353,6 +353,15 @@ export class Builder {
       return { $literal: expr }
     }
 
+    // `$.query(row, query)` compiles to `{ $expr, ...query }`, mixing the eval
+    // flag with a plain Query.Expr fragment (see Builder#query, which already
+    // splits these apart for `where` clauses). Do the same split here so the
+    // same helper works inside `having` / other eval contexts.
+    if ('$expr' in expr) {
+      const { $expr, ...rest } = expr
+      return { $and: [this.eval($expr, group), this.transformQueryExpr(rest, group)] }
+    }
+
     for (const key in expr) {
       if (this.evalOperators[key]) {
         this.evalExpr = expr
@@ -373,6 +382,62 @@ export class Builder {
     }
 
     return expr
+  }
+
+  // counterpart of Builder#query for use inside eval expressions (e.g. the
+  // rest of a `$.query()` call, reached through `having`). Field predicates
+  // are compiled to aggregation expressions (`{ $eq: [ref, value] }`) instead
+  // of match filters (`{ [key]: { $eq: value } }`).
+  private transformQueryExpr(query: Query.Expr, group?: Dict): any {
+    const conditions: any[] = []
+    for (const key in query) {
+      const value = query[key]
+      if (key === '$and') {
+        conditions.push({ $and: (value as Query.Expr[]).map(item => this.transformQueryExpr(item, group)) })
+      } else if (key === '$or') {
+        conditions.push({ $or: (value as Query.Expr[]).map(item => this.transformQueryExpr(item, group)) })
+      } else if (key === '$not') {
+        conditions.push({ $not: [this.transformQueryExpr(value as Query.Expr, group)] })
+      } else if (key === '$expr') {
+        conditions.push(this.eval(value, group))
+      } else {
+        conditions.push(this.createFieldExpr(value, this.getActualKey(key)))
+      }
+    }
+    if (!conditions.length) return true
+    return conditions.length === 1 ? conditions[0] : { $and: conditions }
+  }
+
+  private createFieldExpr(query: Query.Field, key: string): any {
+    const ref = this.recursivePrefix + key
+
+    // shorthand syntax
+    if (isNullable(query)) {
+      return { $eq: [{ $ifNull: [ref, null] }, null] }
+    } else if (isComparable(query) || query instanceof ObjectId) {
+      return { $eq: [ref, query] }
+    } else if (Array.isArray(query)) {
+      return { $in: [ref, query] }
+    } else if (query instanceof RegExp) {
+      return { $regexMatch: { input: ref, regex: query.source, options: query.flags || undefined } }
+    } else if (!Object.keys(query).length) {
+      return true
+    }
+
+    // query operators
+    const conditions: any[] = []
+    for (const prop in query) {
+      if (['$eq', '$ne', '$gt', '$gte', '$lt', '$lte', '$in', '$nin'].includes(prop)) {
+        conditions.push({ [prop]: [ref, (query as any)[prop]] })
+      } else if (prop === '$exists') {
+        const isPresent = { $ne: [{ $ifNull: [ref, null] }, null] }
+        conditions.push((query as any)[prop] ? isPresent : { $not: [isPresent] })
+      } else {
+        throw new Error(`query operator "${prop}" is not supported inside an eval expression (e.g. \`$.query()\` used within \`having\`)`)
+      }
+    }
+    if (!conditions.length) return true
+    return conditions.length === 1 ? conditions[0] : { $and: conditions }
   }
 
   private transformAggr(expr: any) {
