@@ -1,7 +1,7 @@
 import postgres from 'postgres'
-import { Binary, Dict, difference, isNullable, makeArray, pick } from 'cosmokit'
-import { Driver, Eval, executeUpdate, Field, Selection } from '@cordisjs/plugin-database'
-import { isBracketed } from '@cordisjs/sql-utils'
+import { Binary, Dict, difference, isNullable, isPlainObject, makeArray, pick } from 'cosmokit'
+import { Driver, Eval, executeUpdate, Field, isComparable, Model, Query, Selection } from '@cordisjs/plugin-database'
+import { isBracketed, isSqlJson } from '@cordisjs/sql-utils'
 import { escapeId, formatTime, PostgresBuilder } from './builder'
 import zhCN from './locales/zh-CN.yml'
 import enUS from './locales/en-US.yml'
@@ -55,6 +55,17 @@ const timeRegex = /(\d+):(\d+):(\d+)(\.(\d+))?/
 
 function createIndex(keys: string | string[]) {
   return makeArray(keys).map(escapeId).join(', ')
+}
+
+function isPrimaryKeyQuery(model: Model, query: Query.Expr) {
+  const primary = makeArray(model.primary)
+  return primary.length && primary.every((key) => {
+    const field = model.fields[key]
+    if (!field || field.expr || isSqlJson(field.type) || !Object.hasOwn(query, key)) return false
+    const condition = query[key]
+    return isComparable(condition)
+      || (isPlainObject(condition) && Object.hasOwn(condition, '$eq') && isComparable(condition.$eq))
+  })
 }
 
 export class PostgresDriver extends Driver<PostgresDriver.Config> {
@@ -319,7 +330,7 @@ export class PostgresDriver extends Driver<PostgresDriver.Config> {
     const builder = new PostgresBuilder(this, tables)
     const filter = builder.parseQuery(query)
     const fields = model.availableFields()
-    if (filter === '0') return
+    if (filter === 'FALSE') return
     const updateFields = [...new Set(Object.keys(data).map((key) => {
       return Object.keys(fields).find(field => field === key || key.startsWith(field + '.'))!
     }))]
@@ -328,10 +339,14 @@ export class PostgresDriver extends Driver<PostgresDriver.Config> {
       const escaped = builder.escapeId(field)
       return `${escaped} = ${builder.toUpdateExpr(data, field, fields[field], false)}`
     }).join(', ')
-    const primaryFields = makeArray(model.primary).map(k => builder.escapeId(k))
-    const primaryTuple = primaryFields.length === 1 ? primaryFields[0] : `(${primaryFields.join(', ')})`
-    const subquery = `SELECT ${primaryFields.join(', ')} FROM ${builder.escapeId(table)} WHERE ${filter} LIMIT 1`
-    const result = await this.query(`UPDATE ${builder.escapeId(table)} ${ref} SET ${update} WHERE ${primaryTuple} = (${subquery}) RETURNING *`)
+    let condition = filter
+    if (!isPrimaryKeyQuery(model, query)) {
+      const primaryFields = makeArray(model.primary).map(k => builder.escapeId(k))
+      const primaryTuple = primaryFields.length === 1 ? primaryFields[0] : `(${primaryFields.join(', ')})`
+      const subquery = `SELECT ${primaryFields.join(', ')} FROM ${builder.escapeId(table)} ${ref} WHERE ${filter} LIMIT 1 FOR UPDATE OF ${ref}`
+      condition = `${primaryTuple} = (${subquery})`
+    }
+    const result = await this.query(`UPDATE ${builder.escapeId(table)} ${ref} SET ${update} WHERE ${condition} RETURNING *`)
     return result[0] ? builder.load(result[0], model) : undefined
   }
 
