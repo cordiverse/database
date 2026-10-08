@@ -2,6 +2,7 @@ export * from './shape'
 
 import { Database } from '@cordisjs/plugin-database'
 import { beforeAll, describe } from 'vitest'
+import Preparation from './preparation'
 import ModelOperations from './model'
 import QueryOperators from './query'
 import UpdateOperators from './update'
@@ -79,6 +80,7 @@ function createUnit<T>(target: T, root = false): Unit<T> {
 }
 
 namespace Tests {
+  export const preparation = Preparation
   export const model = ModelOperations
   export const query = QueryOperators
   export const update = UpdateOperators

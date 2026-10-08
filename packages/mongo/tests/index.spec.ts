@@ -25,6 +25,7 @@ describe('@cordisjs/plugin-database-mongo', () => {
   })
 
   test(ctx, {
+    preparation: false,
     model: {
       object: {
         aggregateNull: false,

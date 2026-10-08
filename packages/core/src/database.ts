@@ -123,12 +123,18 @@ export class Database extends Service {
 
   private async prepare(name: string) {
     this.stashed.add(name)
-    await this.prepareTasks[name]
+    const previous = this.prepareTasks[name]
+    // A newly scheduled preparation may retry a failed attempt.
+    await previous?.catch(() => {})
     await Promise.resolve()
-    if (!this.stashed.delete(name)) return
+    // Coalesced requests must still report the result of the actual preparation.
+    if (!this.stashed.delete(name)) return previous
 
     const driver = this.getDriver(name)
     if (!driver) return
+
+    const dependencies = this.getPrepareDependencies(name)
+    await Promise.all(dependencies.map(table => this.prepareTasks[table]))
 
     driver.tables.add(name)
 
@@ -137,6 +143,27 @@ export class Database extends Service {
 
     await driver.prepare(name)
     await driver.prepareIndexes(name)
+  }
+
+  private getPrepareDependencies(name: string): string[] {
+    const visited = new Set<string>()
+    const path: string[] = []
+    const dependencies = (name: string) => deduplicate(Object.values(this.tables[name]?.foreign ?? {})
+      .map(foreign => foreign![0])
+      .filter(table => table !== name && this.prepareTasks[table]))
+    const visit = (name: string) => {
+      const index = path.indexOf(name)
+      if (index >= 0) {
+        throw new Error(`circular foreign key dependency: ${[...path.slice(index), name].join(' -> ')}`)
+      }
+      if (visited.has(name)) return
+      path.push(name)
+      dependencies(name).forEach(visit)
+      path.pop()
+      visited.add(name)
+    }
+    visit(name)
+    return dependencies(name)
   }
 
   extend<K extends Keys<Tables>>(name: K, fields: Field.Extension<Tables[K]>, config: Partial<Model.Config<FlatKeys<Tables[K]>>> = {}) {
