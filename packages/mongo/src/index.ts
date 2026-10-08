@@ -13,6 +13,10 @@ const tempKey = '__temp_minato_mongo__'
 
 interface TableMeta {
   _id: string
+  /** @deprecated legacy format (< 3.7.0) stored one entry per table with an ObjectId `_id` */
+  table?: string
+  /** @deprecated legacy format (< 3.7.0) stored one entry per table with an ObjectId `_id` */
+  field?: string
   virtual?: boolean
   migrate?: boolean
   autoInc?: number
@@ -149,7 +153,15 @@ export class MongoDriver extends Driver<MongoDriver.Config> {
     const meta = { _id: table }, found = await metaTable.findOne(meta)
     if (!found?.fields) {
       this.ctx.logger?.info('initializing fields for table %s', table)
-      await metaTable.updateOne(meta, { $set: { fields: Object.keys(fields) } }, { upsert: true })
+      // inherit `virtual` / `autoInc` from legacy-format entries (see #_migratePrimary)
+      // otherwise both values are lost after the migration, which will make
+      // `_migratePrimary` re-scan the whole table on every startup and may even
+      // trigger an unwanted full-table rewrite in `_migrateVirtual`
+      const legacy = await metaTable.findOne({ table, field: this.model(table).primary })
+      const $set: Partial<TableMeta> = { fields: Object.keys(fields) }
+      if (legacy?.virtual !== undefined) $set.virtual = legacy.virtual
+      if (legacy?.autoInc !== undefined) $set.autoInc = legacy.autoInc
+      await metaTable.updateOne(meta, { $set }, { upsert: true })
       return
     }
     for (const key in fields) {
