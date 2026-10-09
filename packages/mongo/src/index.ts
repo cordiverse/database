@@ -171,18 +171,29 @@ export class MongoDriver extends Driver<MongoDriver.Config> {
     if (Array.isArray(primary)) return
     const metaTable = this.db.collection<TableMeta>('_fields')
     const meta = { _id: table }, found = await metaTable.findOne(meta)
+    const tempTable = '_migrate_' + table
+
+    // Finish a pending rename before checking the layout: prepare() may have
+    // recreated an empty source collection after a crash between drop and rename.
+    if (found?.migrate && await this.db.listCollections({ name: tempTable }).hasNext()) {
+      this.logger.info('last time crashed, recover')
+      await this.db.dropCollection(table).catch(noop)
+      await this.db.renameCollection(tempTable, table)
+    }
+
     let virtual = !!found?.virtual
     const useVirtualKey = !!this.getVirtualKey(table)
-    // If  _fields table was missing for any reason
-    // Test the type of _id to get its possible preference
-    if (!found) {
+    // A completed rename may leave stale metadata. Infer the actual layout on
+    // recovery, just as when _fields is missing. UUID and binary keys are objects
+    // too, so distinguish them from MongoDB's generated ObjectIds explicitly.
+    if (!found || found.migrate) {
       const doc = await this.db.collection(table).findOne()
       if (doc) {
-        virtual = typeof doc._id !== 'object' || (typeof primary === 'string' && fields[primary]?.deftype === 'primary')
+        virtual = !(doc._id instanceof ObjectId) || fields[primary]?.deftype === 'primary'
       }
       if (!doc || virtual === useVirtualKey) {
         // Empty table or already configured
-        await metaTable.updateOne(meta, { $set: { virtual: useVirtualKey } }, { upsert: true })
+        await metaTable.updateOne(meta, { $set: { virtual: useVirtualKey, migrate: false } }, { upsert: true })
         this.logger.info('successfully reconfigured table %s', table)
         return
       }
@@ -190,21 +201,17 @@ export class MongoDriver extends Driver<MongoDriver.Config> {
     if (virtual === useVirtualKey) return
     this.logger.info('start migrating table %s', table)
 
-    if (found?.migrate && await this.db.listCollections({ name: '_migrate_' + table }).hasNext()) {
-      this.logger.info('last time crashed, recover')
-    } else {
-      await this.db.dropCollection('_migrate_' + table).catch(noop)
-      await this.db.collection(table).aggregate([
-        { $addFields: { _temp_id: '$_id' } },
-        { $unset: ['_id'] },
-        { $addFields: useVirtualKey ? { _id: '$' + primary } : { [primary]: '$_temp_id' } },
-        { $unset: ['_temp_id', ...useVirtualKey ? [primary] : []] },
-        { $out: '_migrate_' + table },
-      ]).toArray()
-      await metaTable.updateOne(meta, { $set: { migrate: true } }, { upsert: true })
-    }
+    await this.db.dropCollection(tempTable).catch(noop)
+    await this.db.collection(table).aggregate([
+      { $addFields: { _temp_id: '$_id' } },
+      { $unset: ['_id'] },
+      { $addFields: useVirtualKey ? { _id: '$' + primary } : { [primary]: '$_temp_id' } },
+      { $unset: ['_temp_id', ...useVirtualKey ? [primary] : []] },
+      { $out: tempTable },
+    ]).toArray()
+    await metaTable.updateOne(meta, { $set: { migrate: true } }, { upsert: true })
     await this.db.dropCollection(table).catch(noop)
-    await this.db.renameCollection('_migrate_' + table, table)
+    await this.db.renameCollection(tempTable, table)
     await metaTable.updateOne(meta,
       { $set: { virtual: useVirtualKey, migrate: false } },
       { upsert: true },
@@ -219,19 +226,7 @@ export class MongoDriver extends Driver<MongoDriver.Config> {
     const meta = { _id: table }, found = await metaTable.findOne(meta)
     if (!isNullable(found?.autoInc)) return
 
-    const coll = this.db.collection(table)
-    // Primary _id cannot be modified thus should always meet the requirements
-    if (!this.getVirtualKey(table)) {
-      const bulk = coll.initializeOrderedBulkOp()
-      await coll.find().forEach((data) => {
-        bulk
-          .find({ [primary]: data[primary] })
-          .update({ $set: { [primary]: +data[primary] } })
-      })
-      if (bulk.batches.length) await bulk.execute()
-    }
-
-    const [latest] = await coll.find().sort(this.getVirtualKey(table) ? '_id' : primary, -1).limit(1).toArray()
+    const [latest] = await this.db.collection(table).find().sort(this.getVirtualKey(table) ? '_id' : primary, -1).limit(1).toArray()
     await metaTable.updateOne(meta, {
       $set: { autoInc: latest ? +latest[this.getVirtualKey(table) ? '_id' : primary] : 0, virtual: !!this.getVirtualKey(table) },
     }, { upsert: true })
@@ -332,6 +327,17 @@ export class MongoDriver extends Driver<MongoDriver.Config> {
     return row
   }
 
+  public mapVirtualUpdateKey(key: string, virtualKey?: string) {
+    return key === virtualKey ? '_id' : key
+  }
+
+  public mapVirtualUpdate(update: Dict, virtualKey?: string, transform?: (value: any, key: string) => any) {
+    return Object.fromEntries(Object.entries(update).map(([key, value]) => [
+      this.mapVirtualUpdateKey(key, virtualKey),
+      transform ? transform(value, key) : value,
+    ]))
+  }
+
   private transformQuery(sel: Selection.Immutable, query: Query.Expr, table: string) {
     return new Builder(this, Object.keys(sel.tables), this.getVirtualKey(table)).query(sel, query)
   }
@@ -370,8 +376,9 @@ export class MongoDriver extends Driver<MongoDriver.Config> {
       if (!filter) return {}
       const coll = this.db.collection(table)
 
-      const transformer = new Builder(this, Object.keys(sel.tables), this.getVirtualKey(table), '$' + tempKey + '.')
-      const $set = mapValues(update, (item: any, key) => transformer.toUpdateExpr(item, model.getType(key)))
+      const virtualKey = this.getVirtualKey(table)
+      const transformer = new Builder(this, Object.keys(sel.tables), virtualKey, '$' + tempKey + '.')
+      const $set = this.mapVirtualUpdate(update, virtualKey, (item, key) => transformer.toUpdateExpr(item, model.getType(key)))
       const $unset = Object.entries($set)
         .filter(([_, value]) => typeof value === 'object')
         .map(([key, _]) => key)
@@ -450,6 +457,7 @@ export class MongoDriver extends Driver<MongoDriver.Config> {
     if (!data.length) return {}
     const { table, ref, model } = sel
     const coll = this.db.collection(table)
+    const virtualKey = this.getVirtualKey(table)
 
     // If ensure primary, we must figure out number of insertions
     if (this.shouldEnsurePrimary(table)) {
@@ -465,7 +473,10 @@ export class MongoDriver extends Driver<MongoDriver.Config> {
         const item = original.find(item => keys.every(key => item[key]?.valueOf() === update[key]?.valueOf()))
         if (item) {
           const updateFields = new Set(Object.keys(update).map(key => key.split('.', 1)[0]))
-          const override = this.builder.dump(omit(pick(executeUpdate(item, update, ref), updateFields), keys), model)
+          const override = this.mapVirtualUpdate(
+            this.builder.dump(omit(pick(executeUpdate(item, update, ref), updateFields), keys), model),
+            virtualKey,
+          )
           const query = this.transformQuery(sel, pick(item, keys), table)
           if (!query) continue
           bulk.find(query).updateOne({ $set: override })
@@ -484,25 +495,30 @@ export class MongoDriver extends Driver<MongoDriver.Config> {
       const bulk = coll.initializeUnorderedBulkOp()
       const initial = model.create()
       const hasInitial = !!Object.keys(initial).length
+      const initialDump = this.mapVirtualUpdate(this.builder.dump(initial, model), virtualKey)
 
       for (const update of data) {
         const query = this.transformQuery(sel, pick(update, keys), table)!
-        const transformer = new Builder(this, Object.keys(sel.tables), this.getVirtualKey(table), '$' + tempKey + '.')
-        const $set = mapValues(update, (item: any, key) => transformer.toUpdateExpr(item, model.getType(key)))
+        const transformer = new Builder(this, Object.keys(sel.tables), virtualKey, '$' + tempKey + '.')
+        const $set = this.mapVirtualUpdate(omit(update, keys), virtualKey, (item, key) => transformer.toUpdateExpr(item, model.getType(key)))
         const $unset = Object.entries($set)
           .filter(([_, value]) => typeof value === 'object')
           .map(([key, _]) => key)
         const preset = Object.fromEntries(transformer.walkedKeys.map(key => [tempKey + '.' + key, {
-          $ifNull: ['$' + key, initial[key]],
+          $ifNull: ['$' + key, initialDump[key]],
         }]))
 
-        bulk.find(query).upsert().updateOne([
+        const pipeline: any[] = [
           ...transformer.walkedKeys.length ? [{ $set: preset }] : [],
-          ...hasInitial ? [{ $replaceRoot: { newRoot: { $mergeObjects: [initial, '$$ROOT'] } } }] : [],
+          ...hasInitial ? [{ $replaceRoot: { newRoot: { $mergeObjects: [initialDump, '$$ROOT'] } } }] : [],
           ...$unset.length ? [{ $unset }] : [],
-          { $set },
+          ...Object.keys($set).length ? [{ $set }] : [],
           ...transformer.walkedKeys.length ? [{ $unset: [tempKey] }] : [],
-        ])
+        ]
+        if (!pipeline.length) {
+          pipeline.push({ $replaceRoot: { newRoot: '$$ROOT' } })
+        }
+        bulk.find(query).upsert().updateOne(pipeline)
       }
       const result = await bulk.execute({ session: this.session })
       return { inserted: result.insertedCount + result.upsertedCount, matched: result.matchedCount, modified: result.modifiedCount }
