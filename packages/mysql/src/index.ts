@@ -191,15 +191,15 @@ export class MySQLDriver extends Driver<MySQLDriver.Config> {
       const legacy = [key, ...fields[key]!.legacy || []]
       const column = columns.find(info => legacy.includes(info.COLUMN_NAME))
       let shouldUpdate = column?.COLUMN_NAME !== key
+      const typedef = this.getTypeDef(fields[key]!)
+      if (column && !shouldUpdate) {
+        shouldUpdate = this.isDefUpdated(fields[key]!, column, typedef)
+      }
 
       let def = escapeId(key)
       if (key === primary && autoInc) {
-        def += ' int unsigned not null auto_increment'
+        def += ` ${typedef} not null auto_increment`
       } else {
-        const typedef = this.getTypeDef(fields[key]!)
-        if (column && !shouldUpdate) {
-          shouldUpdate = this.isDefUpdated(fields[key]!, column, typedef)
-        }
         def += ' ' + typedef
         if (makeArray(primary).includes(key)) {
           def += ' not null'

@@ -20,6 +20,7 @@ describe('@cordisjs/plugin-database-memory', () => {
   })
 
   test(ctx, {
+    preparation: false,
     migration: false,
     update: {
       index: false,

@@ -22,6 +22,7 @@ describe('@cordisjs/plugin-database-sqlite', () => {
   })
 
   test(ctx, {
+    preparation: false,
     query: {
       list: {
         elementQuery: false,
