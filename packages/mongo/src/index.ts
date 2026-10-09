@@ -180,18 +180,29 @@ export class MongoDriver extends Driver<MongoDriver.Config> {
     if (Array.isArray(primary)) return
     const metaTable = this.db.collection<TableMeta>('_fields')
     const meta = { _id: table }, found = await metaTable.findOne(meta)
+    const tempTable = '_migrate_' + table
+
+    // Finish a pending rename before checking the layout: prepare() may have
+    // recreated an empty source collection after a crash between drop and rename.
+    if (found?.migrate && await this.db.listCollections({ name: tempTable }).hasNext()) {
+      this.ctx.logger?.info('last time crashed, recover')
+      await this.db.dropCollection(table).catch(noop)
+      await this.db.renameCollection(tempTable, table)
+    }
+
     let virtual = !!found?.virtual
     const useVirtualKey = !!this.getVirtualKey(table)
-    // If  _fields table was missing for any reason
-    // Test the type of _id to get its possible preference
-    if (!found) {
+    // A completed rename may leave stale metadata. Infer the actual layout on
+    // recovery, just as when _fields is missing. UUID and binary keys are objects
+    // too, so distinguish them from MongoDB's generated ObjectIds explicitly.
+    if (!found || found.migrate) {
       const doc = await this.db.collection(table).findOne()
       if (doc) {
-        virtual = typeof doc._id !== 'object' || (typeof primary === 'string' && fields[primary]?.deftype === 'primary')
+        virtual = !(doc._id instanceof ObjectId) || fields[primary]?.deftype === 'primary'
       }
       if (!doc || virtual === useVirtualKey) {
         // Empty table or already configured
-        await metaTable.updateOne(meta, { $set: { virtual: useVirtualKey } }, { upsert: true })
+        await metaTable.updateOne(meta, { $set: { virtual: useVirtualKey, migrate: false } }, { upsert: true })
         this.ctx.logger?.info('successfully reconfigured table %s', table)
         return
       }
@@ -199,21 +210,17 @@ export class MongoDriver extends Driver<MongoDriver.Config> {
     if (virtual === useVirtualKey) return
     this.ctx.logger?.info('start migrating table %s', table)
 
-    if (found?.migrate && await this.db.listCollections({ name: '_migrate_' + table }).hasNext()) {
-      this.ctx.logger?.info('last time crashed, recover')
-    } else {
-      await this.db.dropCollection('_migrate_' + table).catch(noop)
-      await this.db.collection(table).aggregate([
-        { $addFields: { _temp_id: '$_id' } },
-        { $unset: ['_id'] },
-        { $addFields: useVirtualKey ? { _id: '$' + primary } : { [primary]: '$_temp_id' } },
-        { $unset: ['_temp_id', ...useVirtualKey ? [primary] : []] },
-        { $out: '_migrate_' + table },
-      ]).toArray()
-      await metaTable.updateOne(meta, { $set: { migrate: true } }, { upsert: true })
-    }
+    await this.db.dropCollection(tempTable).catch(noop)
+    await this.db.collection(table).aggregate([
+      { $addFields: { _temp_id: '$_id' } },
+      { $unset: ['_id'] },
+      { $addFields: useVirtualKey ? { _id: '$' + primary } : { [primary]: '$_temp_id' } },
+      { $unset: ['_temp_id', ...useVirtualKey ? [primary] : []] },
+      { $out: tempTable },
+    ]).toArray()
+    await metaTable.updateOne(meta, { $set: { migrate: true } }, { upsert: true })
     await this.db.dropCollection(table).catch(noop)
-    await this.db.renameCollection('_migrate_' + table, table)
+    await this.db.renameCollection(tempTable, table)
     await metaTable.updateOne(meta,
       { $set: { virtual: useVirtualKey, migrate: false } },
       { upsert: true },
