@@ -202,6 +202,9 @@ export class Database<S = {}, N = {}, C extends Context = Context> extends Servi
     model.unique = model.unique.map(keys => typeof keys === 'string' ? model.fields[keys]!.relation?.fields || keys
       : keys.map(key => model.fields[key]!.relation?.fields || key).flat())
 
+    // Refresh the type cache after adding relation foreign key fields.
+    defineProperty(model, 'type', Type.Object(mapValues(model.fields, field => Type.fromField(field!))) as any)
+
     this.prepareTasks[name] = this.prepare(name)
     ;(this.ctx as Context).emit('model', name)
   }
@@ -577,8 +580,12 @@ export class Database<S = {}, N = {}, C extends Context = Context> extends Servi
     const finalTasks: Promise<void>[] = []
     const database = this.makeProxy(Database.transact, (driver) => {
       let initialized = false, session: any
-      let _resolve: (value: any) => void
-      const sessionTask = new Promise((resolve) => _resolve = resolve)
+      let _resolve: (value: any) => void, _reject: (reason?: any) => void
+      const sessionTask = new Promise((resolve, reject) => {
+        _resolve = resolve
+        _reject = reject
+      })
+      sessionTask.catch(noop)
       driver = new Proxy(driver, {
         get: (target, p, receiver) => {
           if (p === Database.transact) return target
@@ -588,17 +595,22 @@ export class Database<S = {}, N = {}, C extends Context = Context> extends Servi
           return Reflect.get(target, p, receiver)
         },
       })
-      finalTasks.push(driver.withTransaction((_session) => {
+      const task = Promise.resolve().then(() => driver.withTransaction((_session) => {
         if (initialized) initialTask = initialTaskFactory()
         initialized = true
         _resolve(session = _session)
         return initialTask as any
       }))
+      task.catch(error => !initialized && _reject(error))
+      finalTasks.push(task)
       return driver
     })
     const initialTaskFactory = () => Promise.resolve().then(() => callback(database))
     let initialTask = initialTaskFactory()
-    return initialTask.catch(noop).finally(() => Promise.all(finalTasks))
+    return initialTask.catch(noop).then(async () => {
+      await Promise.all(finalTasks)
+      return initialTask
+    })
   }
 
   async stopAll() {
