@@ -58,7 +58,7 @@ export class SQLiteDriver extends Driver<SQLiteDriver.Config> {
   sql = new SQLiteBuilder(this)
   beforeUnload?: () => void
 
-  private _transactionTask?: Promise<void>
+  private _transactionTask = Promise.resolve()
 
   /** synchronize table schema */
   async prepare(table: string, dropKeys?: string[]) {
@@ -443,8 +443,7 @@ export class SQLiteDriver extends Driver<SQLiteDriver.Config> {
   }
 
   async withTransaction(callback: () => Promise<void>) {
-    if (this._transactionTask) await this._transactionTask.catch(() => {})
-    return this._transactionTask = (async () => {
+    return this._transactionTask = this._transactionTask.catch(() => {}).then(async () => {
       this._run('BEGIN TRANSACTION')
       try {
         await callback()
@@ -455,7 +454,7 @@ export class SQLiteDriver extends Driver<SQLiteDriver.Config> {
         } catch {}
         throw error
       }
-    })()
+    })
   }
 
   async getIndexes(table: string) {
