@@ -26,13 +26,13 @@
     "memory"
   ],
   "peerDependencies": {
-    "@cordisjs/plugin-database": "^4.1.1",
-    "cordis": "^4.0.0-rc.7"
+    "@cordisjs/plugin-database": "^4.2.0",
+    "cordis": "^4.0.0-rc.10"
   },
   "devDependencies": {
-    "@cordisjs/database-tests": "^3.1.1",
-    "@cordisjs/plugin-database": "^4.1.1",
-    "cordis": "^4.0.0-rc.7"
+    "@cordisjs/database-tests": "^3.2.0",
+    "@cordisjs/plugin-database": "^4.2.0",
+    "cordis": "^4.0.0-rc.10"
   },
   "dependencies": {
     "cosmokit": "^1.8.1",
