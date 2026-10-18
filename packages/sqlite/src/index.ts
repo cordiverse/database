@@ -5,10 +5,13 @@ import type { DatabaseSync, StatementSync } from 'node:sqlite'
 import enUS from './locales/en-US.yml'
 import zhCN from './locales/zh-CN.yml'
 import { SQLiteBuilder } from './builder'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { mkdirSync } from 'node:fs'
 import { dirname } from 'node:path'
 import z from 'schemastery'
+
+// A Windows drive-letter path, e.g. `C:\data\koishi.db` or `C:/data/koishi.db`.
+const driveLetter = /^[A-Za-z]:[\\/]/
 
 function getTypeDef({ deftype: type }: Field) {
   switch (type) {
@@ -163,7 +166,11 @@ export class SQLiteDriver extends Driver<SQLiteDriver.Config> {
   async start() {
     this.path = this.config.path
     if (this.path !== ':memory:') {
-      this.path = fileURLToPath(new URL(this.path, this.ctx.baseUrl))
+      // On Windows, a drive-letter path is converted with `pathToFileURL`.
+      // `new URL()` would read its `C:` as a URL scheme, which `fileURLToPath` rejects.
+      this.path = fileURLToPath(process.platform === 'win32' && driveLetter.test(this.path)
+        ? pathToFileURL(this.path)
+        : new URL(this.path, this.ctx.baseUrl))
       mkdirSync(dirname(this.path), { recursive: true })
     }
 
