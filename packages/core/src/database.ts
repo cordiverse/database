@@ -585,7 +585,8 @@ export class Database extends Service {
     upsert: Row.Computed<Tables[K], Update<Tables[K]>[]>,
     keys?: MaybeArray<FlatKeys<Tables[K], Indexable>>,
   ): Promise<Driver.WriteResult> {
-    const sel = this.select<never>(table)
+    // the third argument selects the overload for table names even when `Keys<Tables>` is empty
+    const sel = this.select(table, undefined, undefined)
     if (typeof upsert === 'function') upsert = upsert(sel.row)
     upsert = upsert.map(item => sel.model.format(item))
     keys = makeArray(keys || sel.model.primary) as any
@@ -901,7 +902,7 @@ export class Database extends Service {
     return data
   }
 
-  private async processRelationUpdate(table: never, row: any, key: any, value: Relation.Modifier) {
+  private async processRelationUpdate<K extends Keys<Tables>>(table: K, row: any, key: any, value: Relation.Modifier) {
     const model = this.tables[table], update = Object.create(null)
     const relation: Relation.Config<Tables> = this.tables[table].fields[key]!.relation! as any
     if (relation.type === 'oneToOne') {
