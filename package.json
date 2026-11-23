@@ -4,7 +4,6 @@
   "packageManager": "yarn@4.14.1",
   "type": "module",
   "version": "1.0.0",
-  "main": "index.js",
   "workspaces": [
     "docs",
     "external/*",
@@ -12,28 +11,30 @@
   ],
   "license": "MIT",
   "scripts": {
-    "build": "yakumo esbuild & yakumo tsc",
-    "lint": "eslint packages --ext=ts --cache",
-    "test": "yakumo vitest --import tsx -t 10000",
+    "lint": "oxlint",
+    "yakumo": "node --expose-internals --import tsx --import @cordisjs/unyaml node_modules/yakumo/lib/cli.js",
+    "postinstall": "yarn yakumo postinstall",
+    "build": "yarn yakumo esbuild && yarn yakumo tsc",
+    "test": "yarn yakumo vitest --import tsx -t 10000",
     "test:text": "shx rm -rf coverage && yarn test --coverage --coverage.reporter text",
     "test:json": "shx rm -rf coverage && yarn test --coverage --coverage.reporter json",
     "test:html": "shx rm -rf coverage && yarn test --coverage --coverage.reporter html"
   },
   "devDependencies": {
-    "@cordisjs/eslint-config": "^1.1.1",
-    "@cordisjs/unyaml": "^2.0.3",
+    "@cordisjs/oxlint-config": "^1.0.0",
+    "@cordisjs/unyaml": "^3.0.0",
     "@types/node": "^25.3.5",
     "@vitest/coverage-v8": "^4.1.5",
     "esbuild": "^0.28.0",
-    "eslint": "^8.57.1",
+    "oxlint": "^1.93.0",
     "shx": "^0.4.0",
-    "tsx": "npm:@cordiverse/tsx@4.19.3-fix.3",
+    "tsx": "npm:@cordisjs/tsx@4.23.15-fix.1",
     "typescript": "^5.9.3",
     "vite": "^7.3.2",
     "vitest": "^4.1.5",
-    "yakumo": "^3.2.1",
-    "yakumo-esbuild": "^3.0.2",
-    "yakumo-tsc": "^3.0.1",
-    "yakumo-vitest": "^1.3.3"
+    "yakumo": "^3.4.2",
+    "yakumo-esbuild": "^3.1.1",
+    "yakumo-tsc": "^3.1.1",
+    "yakumo-vitest": "^1.4.1"
   }
 }

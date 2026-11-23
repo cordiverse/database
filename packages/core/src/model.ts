@@ -13,6 +13,7 @@ const Primary = Symbol('minato.primary')
 export type Primary = (string | number) & { [Primary]: true }
 
 export namespace Relation {
+  // oxlint-disable-next-line no-unused-vars -- used as the key of the type with the same name
   const Marker = Symbol('minato.relation')
   export type Marker = { [Marker]: true }
 
@@ -161,7 +162,7 @@ export namespace Field {
   export type Definition<T> =
     | (Omit<Field<T>, 'type'> & { type: Type<T> | Keys<Types, T> | NewType<T> })
     | (T extends object ? Object<T> : never)
-    // eslint-disable-next-line @typescript-eslint/array-type
+    // oxlint-disable-next-line typescript/array-type
     | (T extends (infer I)[] ? Array<I> : never)
 
   export type Literal<T> =

@@ -1,8 +1,12 @@
 name: Test
 
 on:
-  - push
-  - pull_request
+  push:
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref == 'refs/heads/main' && github.run_id || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   mysql:
@@ -38,10 +42,12 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: ${{ matrix.node-version }}
+      - name: Install Corepack
+        run: npm install -g --force corepack@latest
       - name: Enable Corepack
         run: corepack enable
       - name: Install
-        run: yarn --no-immutable
+        run: yarn
       - name: Unit Test
         run: yarn test:json mysql
 
@@ -75,10 +81,12 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: ${{ matrix.node-version }}
+      - name: Install Corepack
+        run: npm install -g --force corepack@latest
       - name: Enable Corepack
         run: corepack enable
       - name: Install
-        run: yarn --no-immutable
+        run: yarn
       - name: Unit Test
         run: yarn test:json postgres
 
@@ -109,10 +117,12 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: ${{ matrix.node-version }}
+      - name: Install Corepack
+        run: npm install -g --force corepack@latest
       - name: Enable Corepack
         run: corepack enable
       - name: Install
-        run: yarn --no-immutable
+        run: yarn
       - name: Unit Test
         run: yarn test:json mongo
 
@@ -140,10 +150,12 @@ jobs:
           mongodb-version: ${{ matrix.mongo-version }}
           mongodb-replica-set: test-rs
           mongodb-port: 27017
+      - name: Install Corepack
+        run: npm install -g --force corepack@latest
       - name: Enable Corepack
         run: corepack enable
       - name: Install
-        run: yarn --no-immutable
+        run: yarn
       - name: Unit Test
         run: yarn test:json mongo
         env:
@@ -166,9 +178,11 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: ${{ matrix.node-version }}
+      - name: Install Corepack
+        run: npm install -g --force corepack@latest
       - name: Enable Corepack
         run: corepack enable
       - name: Install
-        run: yarn --no-immutable
+        run: yarn
       - name: Unit Test
         run: yarn test:json ${{ matrix.driver-name }}

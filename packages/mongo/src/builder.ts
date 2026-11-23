@@ -4,7 +4,7 @@ import {
   Model, Query, Selection, Type, unravel,
 } from '@cordisjs/plugin-database'
 import { Filter, FilterOperators, ObjectId } from 'mongodb'
-import MongoDriver from '.'
+import MongoDriver from './index.ts'
 
 export type ExtractUnary<T> = T extends [infer U] ? U : T
 

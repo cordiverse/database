@@ -11,7 +11,7 @@ export interface Compat {
 }
 
 export class MySQLBuilder extends Builder {
-  // eslint-disable-next-line no-control-regex
+  // oxlint-disable-next-line no-control-regex
   protected escapeRegExp = /[\0\b\t\n\r\x1a'"\\]/g
   protected escapeMap = {
     '\0': '\\0',

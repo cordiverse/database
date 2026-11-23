@@ -1,7 +1,7 @@
 import { chai } from 'vitest'
 import chaiAsPromised from 'chai-as-promised'
 import { isNullable } from 'cosmokit'
-import shape from './shape'
+import shape from './shape.ts'
 
 chai.use(shape)
 chai.use(chaiAsPromised)

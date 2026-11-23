@@ -4,7 +4,7 @@ import {
 } from 'mongodb'
 import { Binary, deepEqual, Dict, isNullable, makeArray, mapValues, noop, omit, pick, remove } from 'cosmokit'
 import { bufferToUuid, Driver, Eval, executeUpdate, Field, hasSubquery, Query, RuntimeError, Selection, uuidToBuffer } from '@cordisjs/plugin-database'
-import { Builder } from './builder'
+import { Builder } from './builder.ts'
 import zhCN from './locales/zh-CN.yml'
 import enUS from './locales/en-US.yml'
 import z from 'schemastery'

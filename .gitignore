@@ -16,7 +16,6 @@ test.db
 !.yarn/sdks
 !.yarn/versions
 
-yarn.lock
 package-lock.json
 pnpm-lock.yaml
 
@@ -28,11 +27,11 @@ yarn-debug.log
 yarn-error.log
 package-lock.json
 tsconfig.temp.json
-tsconfig.tsbuildinfo
+*.tsbuildinfo
 report.*.json
 
+.agents
 .claude
-.eslintcache
 .DS_Store
 .idea
 .vscode
@@ -41,4 +40,5 @@ report.*.json
 *.njsproj
 *.sln
 
+AGENTS.md
 CLAUDE.md

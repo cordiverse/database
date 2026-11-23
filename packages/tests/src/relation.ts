@@ -1,6 +1,6 @@
 import { $, Database, Relation, Tables } from '@cordisjs/plugin-database'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
-import { setup } from './utils'
+import { setup } from './utils.ts'
 
 interface User {
   id: number
