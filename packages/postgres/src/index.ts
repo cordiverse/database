@@ -3,8 +3,6 @@ import { Binary, Dict, difference, isNullable, isPlainObject, makeArray, pick } 
 import { Driver, Eval, executeUpdate, Field, isComparable, Model, Query, Selection } from '@cordisjs/plugin-database'
 import { isBracketed, isSqlJson } from '@cordisjs/sql-utils'
 import { escapeId, formatTime, PostgresBuilder } from './builder.ts'
-import zhCN from './locales/zh-CN.yml'
-import enUS from './locales/en-US.yml'
 import z from 'schemastery'
 
 interface ColumnInfo {
@@ -553,14 +551,11 @@ export namespace PostgresDriver {
   }
 
   export const Config: z<Config> = z.object({
-    host: z.string().default('localhost'),
-    port: z.natural().max(65535).default(5432),
-    user: z.string().default('root'),
-    password: z.string().role('secret'),
-    database: z.string().required(),
-  }).i18n({
-    'en-US': enUS,
-    'zh-CN': zhCN,
+    host: z.string().default('localhost').description('The hostname of the server.'),
+    port: z.natural().max(65535).default(5432).description('The port of the server.'),
+    user: z.string().default('root').description('The PostgreSQL user to authenticate as.'),
+    password: z.string().role('secret').description('The password of the user.'),
+    database: z.string().required().description('The name of the database to use.'),
   })
 }
 

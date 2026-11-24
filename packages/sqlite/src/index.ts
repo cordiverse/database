@@ -2,8 +2,6 @@ import { Binary, deepEqual, Dict, difference, isNullable, makeArray, mapValues, 
 import { bufferToUuid, Driver, Eval, executeUpdate, Field, getCell, hasSubquery, isEvalExpr, Selection, uuidToBuffer } from '@cordisjs/plugin-database'
 import { escapeId } from '@cordisjs/sql-utils'
 import type { DatabaseSync, StatementSync } from 'node:sqlite'
-import enUS from './locales/en-US.yml'
-import zhCN from './locales/zh-CN.yml'
 import { SQLiteBuilder } from './builder.ts'
 import { fileURLToPath } from 'node:url'
 import { mkdirSync } from 'node:fs'
@@ -501,10 +499,7 @@ export namespace SQLiteDriver {
   }
 
   export const Config: z<Config> = z.object({
-    path: z.string().role('path').required(),
-  }).i18n({
-    'en-US': enUS,
-    'zh-CN': zhCN,
+    path: z.string().role('path').required().description('The path of the database file. `:memory:` creates an in-memory database.'),
   })
 }
 

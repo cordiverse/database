@@ -4,8 +4,6 @@ import type { OkPacket, Pool, PoolConfig, PoolConnection } from 'mysql'
 import { bufferToUuid, Driver, Eval, executeUpdate, Field, RuntimeError, Selection, uuidToBuffer } from '@cordisjs/plugin-database'
 import { escapeId, isBracketed } from '@cordisjs/sql-utils'
 import { Compat, MySQLBuilder } from './builder.ts'
-import zhCN from './locales/zh-CN.yml'
-import enUS from './locales/en-US.yml'
 import z from 'schemastery'
 
 declare module 'mysql' {
@@ -698,45 +696,42 @@ export namespace MySQLDriver {
 
   export const Config: z<Config> = z.intersect([
     z.object({
-      host: z.string().default('localhost'),
-      port: z.natural().max(65535).default(3306),
-      user: z.string().default('root'),
-      password: z.string().role('secret'),
-      database: z.string().required(),
-      charset: z.string().default('utf8mb4_general_ci'),
+      host: z.string().default('localhost').description('The hostname of the server.'),
+      port: z.natural().max(65535).default(3306).description('The port of the server.'),
+      user: z.string().default('root').description('The MySQL user to authenticate as.'),
+      password: z.string().role('secret').description('The password of the user.'),
+      database: z.string().required().description('The name of the database to use.'),
+      charset: z.string().default('utf8mb4_general_ci').description('The collation of the connection and of the created tables, such as `utf8mb4_general_ci`.'),
     }),
     z.object({
       ssl: z.union([
-        z.const(undefined),
+        z.const(undefined).description('Default'),
         z.object({
-          ca: z.string(),
-          cert: z.string(),
-          sigalgs: z.string(),
-          ciphers: z.string(),
-          clientCertEngine: z.string(),
-          crl: z.string(),
-          dhparam: z.string(),
-          ecdhCurve: z.string(),
-          honorCipherOrder: z.boolean(),
-          key: z.string(),
-          privateKeyEngine: z.string(),
-          privateKeyIdentifier: z.string(),
-          maxVersion: z.string(),
-          minVersion: z.string(),
-          passphrase: z.string(),
-          pfx: z.string(),
-          rejectUnauthorized: z.boolean(),
-          secureOptions: z.natural(),
-          secureProtocol: z.string(),
-          sessionIdContext: z.string(),
-          sessionTimeout: z.number(),
-        }),
-      ]) as any,
+          ca: z.string().description('The trusted CA certificates, in PEM format.'),
+          cert: z.string().description('The certificate chain of the client, in PEM format.'),
+          sigalgs: z.string().description('The supported signature algorithms, separated by colons.'),
+          ciphers: z.string().description('The cipher suites, in OpenSSL cipher list format.'),
+          clientCertEngine: z.string().description('The OpenSSL engine that provides the client certificate.'),
+          crl: z.string().description('The certificate revocation lists, in PEM format.'),
+          dhparam: z.string().description('The Diffie-Hellman parameters, in PEM format.'),
+          ecdhCurve: z.string().description('The curves for ECDH key agreement, separated by colons.'),
+          honorCipherOrder: z.boolean().description('Prefer the cipher order of the server to that of the client.'),
+          key: z.string().description('The private key of the client, in PEM format.'),
+          privateKeyEngine: z.string().description('The OpenSSL engine that provides the private key.'),
+          privateKeyIdentifier: z.string().description('The identifier of the private key in `privateKeyEngine`.'),
+          maxVersion: z.string().description('The maximum TLS version, such as `TLSv1.3`.'),
+          minVersion: z.string().description('The minimum TLS version, such as `TLSv1.2`.'),
+          passphrase: z.string().description('The passphrase of `key` or `pfx`.'),
+          pfx: z.string().description('The private key and certificate chain of the client, in PFX or PKCS12 format.'),
+          rejectUnauthorized: z.boolean().description('Reject a server whose certificate is not signed by a trusted CA.'),
+          secureOptions: z.natural().description('The OpenSSL option flags, as a bitmask of `SSL_OP_*` constants.'),
+          secureProtocol: z.string().description('The OpenSSL method of the TLS protocol, such as `TLS_method`.'),
+          sessionIdContext: z.string().description('The identifier of the session cache context.'),
+          sessionTimeout: z.number().description('The lifetime of a TLS session, in seconds.'),
+        }).description('Custom'),
+      ]).description('The TLS options of the connection.') as any,
     }),
-  ]).i18n({
-    'en-US': enUS,
-    'zh-CN': zhCN,
-  })
+  ])
 }
 
 export default MySQLDriver

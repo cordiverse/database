@@ -5,8 +5,6 @@ import {
 import { Binary, deepEqual, Dict, isNullable, makeArray, mapValues, noop, omit, pick, remove } from 'cosmokit'
 import { bufferToUuid, Driver, Eval, executeUpdate, Field, hasSubquery, Query, RuntimeError, Selection, uuidToBuffer } from '@cordisjs/plugin-database'
 import { Builder } from './builder.ts'
-import zhCN from './locales/zh-CN.yml'
-import enUS from './locales/en-US.yml'
 import z from 'schemastery'
 
 const tempKey = '__temp_minato_mongo__'
@@ -637,25 +635,22 @@ export namespace MongoDriver {
   }
 
   export const Config: z<Config> = z.object({
-    protocol: z.string().default('mongodb'),
-    host: z.string().default('localhost'),
-    port: z.natural().max(65535),
-    username: z.string(),
-    password: z.string().role('secret'),
-    database: z.string().required(),
-    authDatabase: z.string(),
+    protocol: z.string().default('mongodb').description('The protocol of the connection string, such as `mongodb` or `mongodb+srv`.'),
+    host: z.string().default('localhost').description('The hostname of the server.'),
+    port: z.natural().max(65535).description('The port of the server. Defaults to 27017, or to none when the protocol includes `srv`.'),
+    username: z.string().description('The username for authentication.'),
+    password: z.string().role('secret').description('The password for authentication.'),
+    database: z.string().required().description('The name of the database to use.'),
+    authDatabase: z.string().description('The name of the database for authentication. Defaults to `database`.'),
     writeConcern: z.object({
       w: z.union([
-        z.const(undefined),
-        z.number().required(),
-        z.const('majority').required(),
-      ]),
-      wtimeoutMS: z.number(),
-      journal: z.boolean(),
-    }),
-  }).i18n({
-    'en-US': enUS,
-    'zh-CN': zhCN,
+        z.const(undefined).description('Default'),
+        z.number().required().description('Custom'),
+        z.const('majority').required().description('Majority'),
+      ]).description('The number of instances that must acknowledge a write operation.'),
+      wtimeoutMS: z.number().description('The time limit of the write concern, in milliseconds.'),
+      journal: z.boolean().description('Require the write operations to be written to the on-disk journal before they are acknowledged.'),
+    }).description('The acknowledgment requested from the server for write operations.'),
   })
 }
 
