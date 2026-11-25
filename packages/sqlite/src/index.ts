@@ -3,7 +3,7 @@ import { bufferToUuid, Driver, Eval, executeUpdate, Field, getCell, hasSubquery,
 import { escapeId } from '@cordisjs/sql-utils'
 import type { DatabaseSync, StatementSync } from 'node:sqlite'
 import { SQLiteBuilder } from './builder.ts'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { mkdirSync } from 'node:fs'
 import { dirname } from 'node:path'
 import z from 'schemastery'
@@ -161,7 +161,9 @@ export class SQLiteDriver extends Driver<SQLiteDriver.Config> {
   async start() {
     this.path = this.config.path
     if (this.path !== ':memory:') {
-      this.path = fileURLToPath(new URL(this.path, this.ctx.baseUrl))
+      // a relative path is resolved against the base URL of `std:fs` if it is loaded, or the working directory
+      const baseUrl: URL = this.ctx.get('std:fs')?.baseUrl ?? pathToFileURL(process.cwd() + '/')
+      this.path = fileURLToPath(new URL(this.path, baseUrl))
       mkdirSync(dirname(this.path), { recursive: true })
     }
 
