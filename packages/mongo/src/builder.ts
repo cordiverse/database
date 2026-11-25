@@ -2,7 +2,7 @@ import { Dict, isNullable, mapValues } from 'cosmokit'
 import {
   Eval, Field, flatten, isAggrExpr, isComparable, isEvalExpr, isFlat, makeRegExp,
   Model, Query, Selection, Type, unravel,
-} from '@cordisjs/plugin-database'
+} from '@cordisjs/database'
 import { Filter, FilterOperators, ObjectId } from 'mongodb'
 import MongoDriver from './index.ts'
 

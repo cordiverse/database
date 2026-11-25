@@ -3,7 +3,7 @@ import {
   MongoClient, MongoClientOptions, MongoError, ObjectId,
 } from 'mongodb'
 import { Binary, deepEqual, Dict, isNullable, makeArray, mapValues, noop, omit, pick, remove } from 'cosmokit'
-import { bufferToUuid, Driver, Eval, executeUpdate, Field, hasSubquery, Query, RuntimeError, Selection, uuidToBuffer } from '@cordisjs/plugin-database'
+import { bufferToUuid, Driver, Eval, executeUpdate, Field, hasSubquery, Query, RuntimeError, Selection, uuidToBuffer } from '@cordisjs/database'
 import { Builder } from './builder.ts'
 import z from 'schemastery'
 

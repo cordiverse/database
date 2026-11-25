@@ -1,4 +1,4 @@
-import { $, Database, Relation, Tables } from '@cordisjs/plugin-database'
+import { $, Database, Relation, Tables } from '@cordisjs/database'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { setup } from './utils.ts'
 
@@ -69,7 +69,7 @@ interface GuildSync {
   login?: Login
 }
 
-declare module '@cordisjs/plugin-database' {
+declare module '@cordisjs/database' {
   interface Tables {
     user: User
     profile: Profile

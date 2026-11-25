@@ -1,4 +1,4 @@
-import { Database } from '@cordisjs/plugin-database'
+import { Database } from '@cordisjs/database'
 import { expect, it, vi } from 'vitest'
 
 function PreparationTests(database: Database) {

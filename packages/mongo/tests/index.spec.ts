@@ -1,17 +1,17 @@
 import { Context } from 'cordis'
-import Database from '@cordisjs/plugin-database'
-import MongoDriver from '@cordisjs/plugin-database-mongo'
-import LoggerConsole from '@cordisjs/plugin-logger-console'
+import Database from '@cordisjs/database'
+import MongoDriver from '@cordisjs/database-mongo'
+import LoggerConsole from '@cordisjs/logger-console'
 import test from '@cordisjs/database-tests'
 import { afterAll, beforeAll, describe } from 'vitest'
 
-describe('@cordisjs/plugin-database-mongo', () => {
+describe('@cordisjs/database-mongo', () => {
   const ctx = new Context()
 
   beforeAll(async () => {
-    await ctx.plugin(LoggerConsole)
-    await ctx.plugin(Database)
-    await ctx.plugin(MongoDriver, {
+    await ctx.use(LoggerConsole)
+    await ctx.use(Database)
+    await ctx.use(MongoDriver, {
       host: 'localhost',
       port: 27017,
       database: 'test',

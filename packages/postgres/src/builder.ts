@@ -1,6 +1,6 @@
 import { Builder, isBracketed } from '@cordisjs/sql-utils'
 import { Binary, Dict, isNullable, Time } from 'cosmokit'
-import { Driver, Field, isAggrExpr, isEvalExpr, Model, randomId, RegExpLike, Selection, Type, unravel } from '@cordisjs/plugin-database'
+import { Driver, Field, isAggrExpr, isEvalExpr, Model, randomId, RegExpLike, Selection, Type, unravel } from '@cordisjs/database'
 
 export function escapeId(value: string) {
   return '"' + value.replace(/"/g, '""') + '"'

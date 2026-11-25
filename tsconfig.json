@@ -2,8 +2,7 @@
   "extends": "./tsconfig.base",
   "compilerOptions": {
     "paths": {
-      "@cordisjs/plugin-database": ["./packages/core/src/index.ts"],
-      "@cordisjs/plugin-database-*": ["./packages/*/src/index.ts"],
+      "@cordisjs/database": ["./packages/core/src/index.ts"],
       "@cordisjs/database-*": ["./packages/*/src/index.ts"],
       "@cordisjs/sql-utils": ["./packages/sql-utils/src/index.ts"],
     },

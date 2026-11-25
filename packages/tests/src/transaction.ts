@@ -1,4 +1,4 @@
-import { $, Database, Tables } from '@cordisjs/plugin-database'
+import { $, Database, Tables } from '@cordisjs/database'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 
 interface Bar {
@@ -12,7 +12,7 @@ interface Bar {
   time?: Date
 }
 
-declare module '@cordisjs/plugin-database' {
+declare module '@cordisjs/database' {
   interface Tables {
     temptx: Bar
   }

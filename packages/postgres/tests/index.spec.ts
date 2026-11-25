@@ -1,17 +1,17 @@
 import { Context } from 'cordis'
-import Database from '@cordisjs/plugin-database'
-import PostgresDriver from '@cordisjs/plugin-database-postgres'
-import LoggerConsole from '@cordisjs/plugin-logger-console'
+import Database from '@cordisjs/database'
+import PostgresDriver from '@cordisjs/database-postgres'
+import LoggerConsole from '@cordisjs/logger-console'
 import test from '@cordisjs/database-tests'
 import { afterAll, beforeAll, describe } from 'vitest'
 
-describe('@cordisjs/plugin-database-postgres', () => {
+describe('@cordisjs/database-postgres', () => {
   const ctx = new Context()
 
   beforeAll(async () => {
-    await ctx.plugin(LoggerConsole)
-    await ctx.plugin(Database)
-    await ctx.plugin(PostgresDriver, {
+    await ctx.use(LoggerConsole)
+    await ctx.use(Database)
+    await ctx.use(PostgresDriver, {
       host: 'localhost',
       port: 5432,
       user: 'koishi',

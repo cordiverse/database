@@ -1,4 +1,4 @@
-import { $, Database } from '@cordisjs/plugin-database'
+import { $, Database } from '@cordisjs/database'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 
 interface ObjectModel {
@@ -16,7 +16,7 @@ interface ObjectModel {
   }
 }
 
-declare module '@cordisjs/plugin-database' {
+declare module '@cordisjs/database' {
   interface Tables {
     object: ObjectModel
   }

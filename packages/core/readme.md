@@ -1,17 +1,17 @@
 # database
 
 [![Codecov](https://img.shields.io/codecov/c/github/cordiverse/database?style=flat-square)](https://codecov.io/gh/cordiverse/database)
-[![downloads](https://img.shields.io/npm/dm/@cordisjs/plugin-database?style=flat-square)](https://www.npmjs.com/package/@cordisjs/plugin-database)
-[![npm](https://img.shields.io/npm/v/@cordisjs/plugin-database?style=flat-square)](https://www.npmjs.com/package/@cordisjs/plugin-database)
+[![downloads](https://img.shields.io/npm/dm/@cordisjs/database?style=flat-square)](https://www.npmjs.com/package/@cordisjs/database)
+[![npm](https://img.shields.io/npm/v/@cordisjs/database?style=flat-square)](https://www.npmjs.com/package/@cordisjs/database)
 [![GitHub](https://img.shields.io/github/license/cordiverse/database?style=flat-square)](https://github.com/cordiverse/database/blob/main/LICENSE)
 
-Type Driven Database Framework.
+Database service for Cordis.
 
 ## Features
 
 - **Compatibility.** Complete driver-independent. Supports many drivers with a unified API.
 - **Powerful.** It can do everything that SQL can do, even though you are not using SQL drivers.
-- **Well-typed.** Minato is written with TypeScript, and it provides top-level typing support.
+- **Well-typed.** It is written in TypeScript, and it provides top-level typing support.
 - **Extensible.** Simultaneous access to different databases based on your needs.
 - **Modern.** Perform all the operations with a JavaScript API or even in the browser with low code.
 
@@ -19,11 +19,11 @@ Type Driven Database Framework.
 
 | Driver | Version | Notes |
 | ------ | ------ | ----- |
-| [Memory](https://github.com/cordiverse/database/tree/main/packages/memory) | [![npm](https://img.shields.io/npm/v/@cordisjs/plugin-database-memory?style=flat-square)](https://www.npmjs.com/package/@cordisjs/plugin-database-memory) | In-memory driver support |
-| [MongoDB](https://github.com/cordiverse/database/tree/main/packages/mongo) | [![npm](https://img.shields.io/npm/v/@cordisjs/plugin-database-mongo?style=flat-square)](https://www.npmjs.com/package/@cordisjs/plugin-database-mongo) | |
-| [MySQL](https://github.com/cordiverse/database/tree/main/packages/mysql) | [![npm](https://img.shields.io/npm/v/@cordisjs/plugin-database-mysql?style=flat-square)](https://www.npmjs.com/package/@cordisjs/plugin-database-mysql) | MySQL 5.7+, MariaDB 10.5 |
-| [PostgreSQL](https://github.com/cordiverse/database/tree/main/packages/postgres) | [![npm](https://img.shields.io/npm/v/@cordisjs/plugin-database-postgres?style=flat-square)](https://www.npmjs.com/package/@cordisjs/plugin-database-postgres) | PostgreSQL 14+ |
-| [SQLite](https://github.com/cordiverse/database/tree/main/packages/sqlite) | [![npm](https://img.shields.io/npm/v/@cordisjs/plugin-database-sqlite?style=flat-square)](https://www.npmjs.com/package/@cordisjs/plugin-database-sqlite) | |
+| [Memory](https://github.com/cordiverse/database/tree/main/packages/memory) | [![npm](https://img.shields.io/npm/v/@cordisjs/database-memory?style=flat-square)](https://www.npmjs.com/package/@cordisjs/database-memory) | In-memory driver support |
+| [MongoDB](https://github.com/cordiverse/database/tree/main/packages/mongo) | [![npm](https://img.shields.io/npm/v/@cordisjs/database-mongo?style=flat-square)](https://www.npmjs.com/package/@cordisjs/database-mongo) | |
+| [MySQL](https://github.com/cordiverse/database/tree/main/packages/mysql) | [![npm](https://img.shields.io/npm/v/@cordisjs/database-mysql?style=flat-square)](https://www.npmjs.com/package/@cordisjs/database-mysql) | MySQL 5.7+, MariaDB 10.5 |
+| [PostgreSQL](https://github.com/cordiverse/database/tree/main/packages/postgres) | [![npm](https://img.shields.io/npm/v/@cordisjs/database-postgres?style=flat-square)](https://www.npmjs.com/package/@cordisjs/database-postgres) | PostgreSQL 14+ |
+| [SQLite](https://github.com/cordiverse/database/tree/main/packages/sqlite) | [![npm](https://img.shields.io/npm/v/@cordisjs/database-sqlite?style=flat-square)](https://www.npmjs.com/package/@cordisjs/database-sqlite) | |
 
 ## Documentation
 

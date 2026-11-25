@@ -1,19 +1,19 @@
 import { Context } from 'cordis'
 import Fs from '@cordisjs/fs'
-import Database from '@cordisjs/plugin-database'
-import SQLiteDriver from '@cordisjs/plugin-database-sqlite'
-import LoggerConsole from '@cordisjs/plugin-logger-console'
+import Database from '@cordisjs/database'
+import SQLiteDriver from '@cordisjs/database-sqlite'
+import LoggerConsole from '@cordisjs/logger-console'
 import test from '@cordisjs/database-tests'
 import { afterAll, beforeAll, describe } from 'vitest'
 
-describe('@cordisjs/plugin-database-sqlite', () => {
+describe('@cordisjs/database-sqlite', () => {
   const ctx = new Context()
 
   beforeAll(async () => {
-    await ctx.plugin(LoggerConsole)
-    await ctx.plugin(Fs)
-    await ctx.plugin(Database)
-    await ctx.plugin(SQLiteDriver, {
+    await ctx.use(LoggerConsole)
+    await ctx.use(Fs)
+    await ctx.use(Database)
+    await ctx.use(SQLiteDriver, {
       path: new URL('test.db', import.meta.url).href,
     })
   })

@@ -1,7 +1,7 @@
 {
-  "name": "@cordisjs/plugin-database-sqlite",
-  "version": "5.2.0",
-  "description": "SQLite Driver for Minato",
+  "name": "@cordisjs/database-sqlite",
+  "version": "6.0.0",
+  "description": "SQLite database driver for Cordis",
   "type": "module",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
@@ -26,19 +26,19 @@
     "sqlite"
   ],
   "peerDependencies": {
+    "@cordisjs/database": "^4.2.0",
     "@cordisjs/fs": "^2.0.0-rc.1",
-    "@cordisjs/plugin-database": "^4.2.0",
     "cordis": "^4.0.0-rc.14"
   },
   "devDependencies": {
-    "@cordisjs/database-tests": "^3.2.0",
+    "@cordisjs/database": "^4.2.0",
+    "@cordisjs/database-tests": "^3.2.1",
     "@cordisjs/fs": "^2.0.0-rc.1",
-    "@cordisjs/plugin-database": "^4.2.0",
-    "@cordisjs/plugin-logger-console": "^1.0.0",
+    "@cordisjs/logger-console": "^1.0.2",
     "cordis": "^4.0.0-rc.14"
   },
   "dependencies": {
-    "@cordisjs/sql-utils": "^6.2.0",
+    "@cordisjs/sql-utils": "^6.2.1",
     "cosmokit": "^1.8.1",
     "schemastery": "^3.18.0"
   }

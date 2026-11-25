@@ -1,6 +1,6 @@
 import { Context } from 'cordis'
-import Database, { Driver } from '@cordisjs/plugin-database'
-import MemoryDriver from '@cordisjs/plugin-database-memory'
+import Database, { Driver } from '@cordisjs/database'
+import MemoryDriver from '@cordisjs/database-memory'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 describe('database preparation', () => {
@@ -13,8 +13,8 @@ describe('database preparation', () => {
 
   beforeEach(async () => {
     ctx = new Context()
-    await ctx.plugin(Database)
-    await ctx.plugin(MemoryDriver)
+    await ctx.use(Database)
+    await ctx.use(MemoryDriver)
     driver = ctx.model.drivers[0]
   })
 

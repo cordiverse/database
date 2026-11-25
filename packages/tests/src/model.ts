@@ -1,5 +1,5 @@
 import { mapValues, isNullable, deduplicate, omit } from 'cosmokit'
-import { $, Database, Field, getCell, Tables, Type, unravel } from '@cordisjs/plugin-database'
+import { $, Database, Field, getCell, Tables, Type, unravel } from '@cordisjs/database'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 
 interface DType {
@@ -74,7 +74,7 @@ interface RecursiveY {
   x?: RecursiveX
 }
 
-declare module '@cordisjs/plugin-database' {
+declare module '@cordisjs/database' {
   interface Tables {
     dtypes: DType
     dobjects: DObject

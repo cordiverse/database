@@ -1,7 +1,7 @@
 import { Binary, Dict, difference, isNullable, makeArray, pick } from 'cosmokit'
 import { createPool, format } from '@vlasky/mysql'
 import type { OkPacket, Pool, PoolConfig, PoolConnection } from 'mysql'
-import { bufferToUuid, Driver, Eval, executeUpdate, Field, RuntimeError, Selection, uuidToBuffer } from '@cordisjs/plugin-database'
+import { bufferToUuid, Driver, Eval, executeUpdate, Field, RuntimeError, Selection, uuidToBuffer } from '@cordisjs/database'
 import { escapeId, isBracketed } from '@cordisjs/sql-utils'
 import { Compat, MySQLBuilder } from './builder.ts'
 import z from 'schemastery'

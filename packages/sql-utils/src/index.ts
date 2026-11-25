@@ -2,7 +2,7 @@ import { Dict, isNullable } from 'cosmokit'
 import {
   Driver, Eval, Field, flatten, isAggrExpr, isComparable, isEvalExpr, isFlat,
   Model, Modifier, Query, randomId, RegExpLike, Selection, Type, unravel,
-} from '@cordisjs/plugin-database'
+} from '@cordisjs/database'
 
 export function escapeId(value: string) {
   return '`' + value + '`'

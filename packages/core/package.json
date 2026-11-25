@@ -1,7 +1,7 @@
 {
-  "name": "@cordisjs/plugin-database",
+  "name": "@cordisjs/database",
   "version": "4.2.0",
-  "description": "Type Driven Database Framework",
+  "description": "Database service for Cordis",
   "type": "module",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",

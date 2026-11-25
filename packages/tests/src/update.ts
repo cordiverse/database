@@ -1,4 +1,4 @@
-import { $, Database, Tables } from '@cordisjs/plugin-database'
+import { $, Database, Tables } from '@cordisjs/database'
 import { deepEqual, omit } from 'cosmokit'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 
@@ -23,7 +23,7 @@ interface Baz {
   value?: string
 }
 
-declare module '@cordisjs/plugin-database' {
+declare module '@cordisjs/database' {
   interface Tables {
     temp2: Bar
     temp3: Baz

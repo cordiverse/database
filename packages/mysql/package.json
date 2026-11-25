@@ -1,7 +1,7 @@
 {
-  "name": "@cordisjs/plugin-database-mysql",
+  "name": "@cordisjs/database-mysql",
   "version": "4.2.0",
-  "description": "MySQL Driver for Minato",
+  "description": "MySQL database driver for Cordis",
   "type": "module",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
@@ -26,18 +26,18 @@
     "mysql"
   ],
   "peerDependencies": {
-    "@cordisjs/plugin-database": "^4.2.0",
+    "@cordisjs/database": "^4.2.0",
     "cordis": "^4.0.0-rc.14"
   },
   "devDependencies": {
-    "@cordisjs/database-tests": "^3.2.0",
-    "@cordisjs/plugin-database": "^4.2.0",
-    "@cordisjs/plugin-logger-console": "^1.0.0",
+    "@cordisjs/database": "^4.2.0",
+    "@cordisjs/database-tests": "^3.2.1",
+    "@cordisjs/logger-console": "^1.0.2",
     "@types/mysql": "^2.15.27",
     "cordis": "^4.0.0-rc.14"
   },
   "dependencies": {
-    "@cordisjs/sql-utils": "^6.2.0",
+    "@cordisjs/sql-utils": "^6.2.1",
     "@vlasky/mysql": "^2.18.7",
     "cosmokit": "^1.8.1",
     "schemastery": "^3.18.0"

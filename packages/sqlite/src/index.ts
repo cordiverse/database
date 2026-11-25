@@ -1,7 +1,7 @@
 import type {} from '@cordisjs/fs'
 import { Inject } from 'cordis'
 import { Binary, deepEqual, Dict, difference, isNullable, makeArray, mapValues, pick } from 'cosmokit'
-import { bufferToUuid, Driver, Eval, executeUpdate, Field, getCell, hasSubquery, isEvalExpr, Selection, uuidToBuffer } from '@cordisjs/plugin-database'
+import { bufferToUuid, Driver, Eval, executeUpdate, Field, getCell, hasSubquery, isEvalExpr, Selection, uuidToBuffer } from '@cordisjs/database'
 import { escapeId } from '@cordisjs/sql-utils'
 import type { DatabaseSync, StatementSync } from 'node:sqlite'
 import { SQLiteBuilder } from './builder.ts'

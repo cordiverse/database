@@ -1,6 +1,6 @@
 export * from './shape.ts'
 
-import { Database } from '@cordisjs/plugin-database'
+import { Database } from '@cordisjs/database'
 import { beforeAll, describe } from 'vitest'
 import Preparation from './preparation.ts'
 import ModelOperations from './model.ts'

@@ -60,19 +60,118 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@cordisjs/database-tests@npm:^3.2.0, @cordisjs/database-tests@workspace:packages/tests":
+"@cordisjs/database-memory@workspace:packages/memory":
+  version: 0.0.0-use.local
+  resolution: "@cordisjs/database-memory@workspace:packages/memory"
+  dependencies:
+    "@cordisjs/database": "npm:^4.2.0"
+    "@cordisjs/database-tests": "npm:^3.2.1"
+    cordis: "npm:^4.0.0-rc.14"
+    cosmokit: "npm:^1.8.1"
+    schemastery: "npm:^3.18.0"
+  peerDependencies:
+    "@cordisjs/database": ^4.2.0
+    cordis: ^4.0.0-rc.14
+  languageName: unknown
+  linkType: soft
+
+"@cordisjs/database-mongo@workspace:packages/mongo":
+  version: 0.0.0-use.local
+  resolution: "@cordisjs/database-mongo@workspace:packages/mongo"
+  dependencies:
+    "@cordisjs/database": "npm:^4.2.0"
+    "@cordisjs/database-tests": "npm:^3.2.1"
+    "@cordisjs/logger-console": "npm:^1.0.2"
+    cordis: "npm:^4.0.0-rc.14"
+    cosmokit: "npm:^1.8.1"
+    mongodb: "npm:^6.21.0"
+    schemastery: "npm:^3.18.0"
+  peerDependencies:
+    "@cordisjs/database": ^4.2.0
+    cordis: ^4.0.0-rc.14
+  languageName: unknown
+  linkType: soft
+
+"@cordisjs/database-mysql@workspace:packages/mysql":
+  version: 0.0.0-use.local
+  resolution: "@cordisjs/database-mysql@workspace:packages/mysql"
+  dependencies:
+    "@cordisjs/database": "npm:^4.2.0"
+    "@cordisjs/database-tests": "npm:^3.2.1"
+    "@cordisjs/logger-console": "npm:^1.0.2"
+    "@cordisjs/sql-utils": "npm:^6.2.1"
+    "@types/mysql": "npm:^2.15.27"
+    "@vlasky/mysql": "npm:^2.18.7"
+    cordis: "npm:^4.0.0-rc.14"
+    cosmokit: "npm:^1.8.1"
+    schemastery: "npm:^3.18.0"
+  peerDependencies:
+    "@cordisjs/database": ^4.2.0
+    cordis: ^4.0.0-rc.14
+  languageName: unknown
+  linkType: soft
+
+"@cordisjs/database-postgres@workspace:packages/postgres":
+  version: 0.0.0-use.local
+  resolution: "@cordisjs/database-postgres@workspace:packages/postgres"
+  dependencies:
+    "@cordisjs/database": "npm:^4.2.0"
+    "@cordisjs/database-tests": "npm:^3.2.1"
+    "@cordisjs/logger-console": "npm:^1.0.2"
+    "@cordisjs/sql-utils": "npm:^6.2.1"
+    cordis: "npm:^4.0.0-rc.14"
+    cosmokit: "npm:^1.8.1"
+    postgres: "npm:^3.4.8"
+    schemastery: "npm:^3.18.0"
+  peerDependencies:
+    "@cordisjs/database": ^4.2.0
+    cordis: ^4.0.0-rc.14
+  languageName: unknown
+  linkType: soft
+
+"@cordisjs/database-sqlite@workspace:packages/sqlite":
+  version: 0.0.0-use.local
+  resolution: "@cordisjs/database-sqlite@workspace:packages/sqlite"
+  dependencies:
+    "@cordisjs/database": "npm:^4.2.0"
+    "@cordisjs/database-tests": "npm:^3.2.1"
+    "@cordisjs/fs": "npm:^2.0.0-rc.1"
+    "@cordisjs/logger-console": "npm:^1.0.2"
+    "@cordisjs/sql-utils": "npm:^6.2.1"
+    cordis: "npm:^4.0.0-rc.14"
+    cosmokit: "npm:^1.8.1"
+    schemastery: "npm:^3.18.0"
+  peerDependencies:
+    "@cordisjs/database": ^4.2.0
+    "@cordisjs/fs": ^2.0.0-rc.1
+    cordis: ^4.0.0-rc.14
+  languageName: unknown
+  linkType: soft
+
+"@cordisjs/database-tests@npm:^3.2.1, @cordisjs/database-tests@workspace:packages/tests":
   version: 0.0.0-use.local
   resolution: "@cordisjs/database-tests@workspace:packages/tests"
   dependencies:
-    "@cordisjs/plugin-database": "npm:^4.2.0"
+    "@cordisjs/database": "npm:^4.2.0"
     "@types/chai-as-promised": "npm:^8.0.2"
     chai-as-promised: "npm:^8.0.2"
     cordis: "npm:^4.0.0-rc.14"
     cosmokit: "npm:^1.8.1"
     vitest: "npm:^4.1.5"
   peerDependencies:
-    "@cordisjs/plugin-database": ^4.2.0
+    "@cordisjs/database": ^4.2.0
     vitest: ^4
+  languageName: unknown
+  linkType: soft
+
+"@cordisjs/database@npm:^4.2.0, @cordisjs/database@workspace:packages/core":
+  version: 0.0.0-use.local
+  resolution: "@cordisjs/database@workspace:packages/core"
+  dependencies:
+    cordis: "npm:^4.0.0-rc.14"
+    cosmokit: "npm:^1.8.1"
+  peerDependencies:
+    cordis: ^4.0.0-rc.14
   languageName: unknown
   linkType: soft
 
@@ -133,6 +232,19 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@cordisjs/logger-console@npm:^1.0.2":
+  version: 1.0.2
+  resolution: "@cordisjs/logger-console@npm:1.0.2"
+  dependencies:
+    cosmokit: "npm:^1.8.1"
+    schemastery: "npm:^3.18.0"
+    supports-color: "npm:^9.4.0"
+  peerDependencies:
+    cordis: ^4.0.0-rc.14
+  checksum: 10c0/7ebeb6717d18383427c683d6a92223c8c43c844f6f646c451602447f124672b4e14f1aa3d4674d262aebe9b1e77b646556579088475c6253deb08fe834b1958f
+  languageName: node
+  linkType: hard
+
 "@cordisjs/oxlint-config@npm:^1.0.0":
   version: 1.0.0
   resolution: "@cordisjs/oxlint-config@npm:1.0.0"
@@ -142,127 +254,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@cordisjs/plugin-database-memory@workspace:packages/memory":
-  version: 0.0.0-use.local
-  resolution: "@cordisjs/plugin-database-memory@workspace:packages/memory"
-  dependencies:
-    "@cordisjs/database-tests": "npm:^3.2.0"
-    "@cordisjs/plugin-database": "npm:^4.2.0"
-    cordis: "npm:^4.0.0-rc.14"
-    cosmokit: "npm:^1.8.1"
-    schemastery: "npm:^3.18.0"
-  peerDependencies:
-    "@cordisjs/plugin-database": ^4.2.0
-    cordis: ^4.0.0-rc.14
-  languageName: unknown
-  linkType: soft
-
-"@cordisjs/plugin-database-mongo@workspace:packages/mongo":
-  version: 0.0.0-use.local
-  resolution: "@cordisjs/plugin-database-mongo@workspace:packages/mongo"
-  dependencies:
-    "@cordisjs/database-tests": "npm:^3.2.0"
-    "@cordisjs/plugin-database": "npm:^4.2.0"
-    "@cordisjs/plugin-logger-console": "npm:^1.0.0"
-    cordis: "npm:^4.0.0-rc.14"
-    cosmokit: "npm:^1.8.1"
-    mongodb: "npm:^6.21.0"
-    schemastery: "npm:^3.18.0"
-  peerDependencies:
-    "@cordisjs/plugin-database": ^4.2.0
-    cordis: ^4.0.0-rc.14
-  languageName: unknown
-  linkType: soft
-
-"@cordisjs/plugin-database-mysql@workspace:packages/mysql":
-  version: 0.0.0-use.local
-  resolution: "@cordisjs/plugin-database-mysql@workspace:packages/mysql"
-  dependencies:
-    "@cordisjs/database-tests": "npm:^3.2.0"
-    "@cordisjs/plugin-database": "npm:^4.2.0"
-    "@cordisjs/plugin-logger-console": "npm:^1.0.0"
-    "@cordisjs/sql-utils": "npm:^6.2.0"
-    "@types/mysql": "npm:^2.15.27"
-    "@vlasky/mysql": "npm:^2.18.7"
-    cordis: "npm:^4.0.0-rc.14"
-    cosmokit: "npm:^1.8.1"
-    schemastery: "npm:^3.18.0"
-  peerDependencies:
-    "@cordisjs/plugin-database": ^4.2.0
-    cordis: ^4.0.0-rc.14
-  languageName: unknown
-  linkType: soft
-
-"@cordisjs/plugin-database-postgres@workspace:packages/postgres":
-  version: 0.0.0-use.local
-  resolution: "@cordisjs/plugin-database-postgres@workspace:packages/postgres"
-  dependencies:
-    "@cordisjs/database-tests": "npm:^3.2.0"
-    "@cordisjs/plugin-database": "npm:^4.2.0"
-    "@cordisjs/plugin-logger-console": "npm:^1.0.0"
-    "@cordisjs/sql-utils": "npm:^6.2.0"
-    cordis: "npm:^4.0.0-rc.14"
-    cosmokit: "npm:^1.8.1"
-    postgres: "npm:^3.4.8"
-    schemastery: "npm:^3.18.0"
-  peerDependencies:
-    "@cordisjs/plugin-database": ^4.2.0
-    cordis: ^4.0.0-rc.14
-  languageName: unknown
-  linkType: soft
-
-"@cordisjs/plugin-database-sqlite@workspace:packages/sqlite":
-  version: 0.0.0-use.local
-  resolution: "@cordisjs/plugin-database-sqlite@workspace:packages/sqlite"
-  dependencies:
-    "@cordisjs/database-tests": "npm:^3.2.0"
-    "@cordisjs/fs": "npm:^2.0.0-rc.1"
-    "@cordisjs/plugin-database": "npm:^4.2.0"
-    "@cordisjs/plugin-logger-console": "npm:^1.0.0"
-    "@cordisjs/sql-utils": "npm:^6.2.0"
-    cordis: "npm:^4.0.0-rc.14"
-    cosmokit: "npm:^1.8.1"
-    schemastery: "npm:^3.18.0"
-  peerDependencies:
-    "@cordisjs/fs": ^2.0.0-rc.1
-    "@cordisjs/plugin-database": ^4.2.0
-    cordis: ^4.0.0-rc.14
-  languageName: unknown
-  linkType: soft
-
-"@cordisjs/plugin-database@npm:^4.2.0, @cordisjs/plugin-database@workspace:packages/core":
-  version: 0.0.0-use.local
-  resolution: "@cordisjs/plugin-database@workspace:packages/core"
-  dependencies:
-    cordis: "npm:^4.0.0-rc.14"
-    cosmokit: "npm:^1.8.1"
-  peerDependencies:
-    cordis: ^4.0.0-rc.14
-  languageName: unknown
-  linkType: soft
-
-"@cordisjs/plugin-logger-console@npm:^1.0.0":
-  version: 1.0.0
-  resolution: "@cordisjs/plugin-logger-console@npm:1.0.0"
-  dependencies:
-    cosmokit: "npm:^1.8.1"
-    schemastery: "npm:^3.18.0"
-    supports-color: "npm:^9.4.0"
-  peerDependencies:
-    cordis: ^4.0.0-rc.4
-  checksum: 10c0/fa9c47b1aeb6ea8223dcf3cc502b85edb580f379f48b081c78a2935988b5d1c6d23b75a29dea939b2af5b700ee399f51adc5f339677d107c4dd5805a11808d69
-  languageName: node
-  linkType: hard
-
-"@cordisjs/sql-utils@npm:^6.2.0, @cordisjs/sql-utils@workspace:packages/sql-utils":
+"@cordisjs/sql-utils@npm:^6.2.1, @cordisjs/sql-utils@workspace:packages/sql-utils":
   version: 0.0.0-use.local
   resolution: "@cordisjs/sql-utils@workspace:packages/sql-utils"
   dependencies:
-    "@cordisjs/plugin-database": "npm:^4.2.0"
+    "@cordisjs/database": "npm:^4.2.0"
     cordis: "npm:^4.0.0-rc.14"
     cosmokit: "npm:^1.8.1"
   peerDependencies:
-    "@cordisjs/plugin-database": ^4.2.0
+    "@cordisjs/database": ^4.2.0
   languageName: unknown
   linkType: soft
 

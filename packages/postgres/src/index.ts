@@ -1,6 +1,6 @@
 import postgres from 'postgres'
 import { Binary, Dict, difference, isNullable, isPlainObject, makeArray, pick } from 'cosmokit'
-import { Driver, Eval, executeUpdate, Field, isComparable, Model, Query, Selection } from '@cordisjs/plugin-database'
+import { Driver, Eval, executeUpdate, Field, isComparable, Model, Query, Selection } from '@cordisjs/database'
 import { isBracketed, isSqlJson } from '@cordisjs/sql-utils'
 import { escapeId, formatTime, PostgresBuilder } from './builder.ts'
 import z from 'schemastery'

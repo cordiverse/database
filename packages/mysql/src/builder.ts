@@ -1,6 +1,6 @@
 import { Builder, escapeId, isBracketed } from '@cordisjs/sql-utils'
 import { Binary, Dict, isNullable, Time } from 'cosmokit'
-import { bufferToUuid, Driver, Field, isAggrExpr, isEvalExpr, Model, randomId, RegExpLike, Selection, Type, uuidToBuffer } from '@cordisjs/plugin-database'
+import { bufferToUuid, Driver, Field, isAggrExpr, isEvalExpr, Model, randomId, RegExpLike, Selection, Type, uuidToBuffer } from '@cordisjs/database'
 
 export interface Compat {
   maria?: boolean

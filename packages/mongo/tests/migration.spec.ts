@@ -1,7 +1,7 @@
-import { $, Database, Driver, Primary } from '@cordisjs/plugin-database'
+import { $, Database, Driver, Primary } from '@cordisjs/database'
 import { Context, Fiber } from 'cordis'
-import MongoDriver from '@cordisjs/plugin-database-mongo'
-import LoggerConsole from '@cordisjs/plugin-logger-console'
+import MongoDriver from '@cordisjs/database-mongo'
+import LoggerConsole from '@cordisjs/logger-console'
 import { ObjectId } from 'mongodb'
 import { expect } from '@cordisjs/database-tests'
 import { afterAll, beforeAll, describe, it, vi } from 'vitest'
@@ -60,7 +60,7 @@ interface RawDoc {
   value?: number
 }
 
-declare module '@cordisjs/plugin-database' {
+declare module '@cordisjs/database' {
   interface Tables {
     mongo1: Foo
     mongo2: Bar
@@ -72,7 +72,7 @@ declare module '@cordisjs/plugin-database' {
   }
 }
 
-describe('@cordisjs/plugin-database-mongo/migrate-virtualKey', () => {
+describe('@cordisjs/database-mongo/migrate-virtualKey', () => {
   const ctx = new Context()
 
   let database: Database
@@ -80,7 +80,7 @@ describe('@cordisjs/plugin-database-mongo/migrate-virtualKey', () => {
 
   const resetConfig = async (optimizeIndex: boolean) => {
     await fiber?.dispose()
-    fiber = await ctx.plugin(MongoDriver, {
+    fiber = await ctx.use(MongoDriver, {
       host: 'localhost',
       port: 27017,
       database: 'test_migrate',
@@ -90,9 +90,9 @@ describe('@cordisjs/plugin-database-mongo/migrate-virtualKey', () => {
   }
 
   beforeAll(async () => {
-    await ctx.plugin(Database)
-    await ctx.plugin(LoggerConsole)
-    fiber = await ctx.plugin(MongoDriver, {
+    await ctx.use(Database)
+    await ctx.use(LoggerConsole)
+    fiber = await ctx.use(MongoDriver, {
       host: 'localhost',
       port: 27017,
       database: 'test_migrate',

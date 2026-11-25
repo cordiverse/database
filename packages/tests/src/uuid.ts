@@ -1,4 +1,4 @@
-import { $, Database } from '@cordisjs/plugin-database'
+import { $, Database } from '@cordisjs/database'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 
 interface UuidRow {
@@ -18,7 +18,7 @@ interface UuidChild {
   parent?: UuidParent
 }
 
-declare module '@cordisjs/plugin-database' {
+declare module '@cordisjs/database' {
   interface Tables {
     uuids: UuidRow
     uuidParents: UuidParent
