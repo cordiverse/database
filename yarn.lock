@@ -216,6 +216,7 @@ __metadata:
   resolution: "@cordisjs/plugin-database-sqlite@workspace:packages/sqlite"
   dependencies:
     "@cordisjs/database-tests": "npm:^3.2.0"
+    "@cordisjs/fs": "npm:^2.0.0-rc.1"
     "@cordisjs/plugin-database": "npm:^4.2.0"
     "@cordisjs/plugin-logger-console": "npm:^1.0.0"
     "@cordisjs/sql-utils": "npm:^6.2.0"
@@ -223,6 +224,7 @@ __metadata:
     cosmokit: "npm:^1.8.1"
     schemastery: "npm:^3.18.0"
   peerDependencies:
+    "@cordisjs/fs": ^2.0.0-rc.1
     "@cordisjs/plugin-database": ^4.2.0
     cordis: ^4.0.0-rc.14
   languageName: unknown

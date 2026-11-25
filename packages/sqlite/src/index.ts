@@ -1,9 +1,11 @@
+import type {} from '@cordisjs/fs'
+import { Inject } from 'cordis'
 import { Binary, deepEqual, Dict, difference, isNullable, makeArray, mapValues, pick } from 'cosmokit'
 import { bufferToUuid, Driver, Eval, executeUpdate, Field, getCell, hasSubquery, isEvalExpr, Selection, uuidToBuffer } from '@cordisjs/plugin-database'
 import { escapeId } from '@cordisjs/sql-utils'
 import type { DatabaseSync, StatementSync } from 'node:sqlite'
 import { SQLiteBuilder } from './builder.ts'
-import { fileURLToPath, pathToFileURL } from 'node:url'
+import { fileURLToPath } from 'node:url'
 import { mkdirSync } from 'node:fs'
 import { dirname } from 'node:path'
 import z from 'schemastery'
@@ -48,6 +50,7 @@ interface SQLiteMasterInfo {
   sql: string
 }
 
+@Inject('std:fs')
 export class SQLiteDriver extends Driver<SQLiteDriver.Config> {
   static name = 'sqlite'
 
@@ -161,9 +164,7 @@ export class SQLiteDriver extends Driver<SQLiteDriver.Config> {
   async start() {
     this.path = this.config.path
     if (this.path !== ':memory:') {
-      // a relative path is resolved against the base URL of `std:fs` if it is loaded, or the working directory
-      const baseUrl: URL = this.ctx.get('std:fs')?.baseUrl ?? pathToFileURL(process.cwd() + '/')
-      this.path = fileURLToPath(new URL(this.path, baseUrl))
+      this.path = fileURLToPath(this.ctx.std.fs.resolve(this.path))
       mkdirSync(dirname(this.path), { recursive: true })
     }
 

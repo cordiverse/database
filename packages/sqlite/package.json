@@ -26,11 +26,13 @@
     "sqlite"
   ],
   "peerDependencies": {
+    "@cordisjs/fs": "^2.0.0-rc.1",
     "@cordisjs/plugin-database": "^4.2.0",
     "cordis": "^4.0.0-rc.14"
   },
   "devDependencies": {
     "@cordisjs/database-tests": "^3.2.0",
+    "@cordisjs/fs": "^2.0.0-rc.1",
     "@cordisjs/plugin-database": "^4.2.0",
     "@cordisjs/plugin-logger-console": "^1.0.0",
     "cordis": "^4.0.0-rc.14"
